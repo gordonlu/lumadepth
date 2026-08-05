@@ -132,10 +132,10 @@ class RenderCoreTest {
 
     @Test
     fun `6 大面积高光`() {
-        val img = TestImages.solid(64, 48, TestImages.argb(240, 240, 240)) +
+        // 大面积纯白（250/255 线性 0.955，已剪裁且无纹理）→ 完全保护，增益受限
+        val img = TestImages.solid(64, 48, TestImages.argb(250, 250, 250)) +
             TestImages.solid(64, 16, 0xFF000000.toInt())
         val p = autoParams(img)
-        // 大面积白色：白色保护显著
         val gm = gainMapOf(img, 64, 64, p)
         var brightGain = 0f
         for (y in 0 until 48) {
@@ -231,9 +231,9 @@ class RenderCoreTest {
         val pixels = TestImages.gradient(50, 200)
         val p1 = autoParams(pixels)
         val gm1 = gainMapOf(pixels, 50, 200, p1)
-        val (rotated, newW) = TestImages.transpose(pixels, 50, 200)
+        val (rotated, newW, newH) = TestImages.transpose(pixels, 50, 200)
         val p2 = autoParams(rotated)
-        val gm2 = gainMapOf(rotated, newW, 200, p2)
+        val gm2 = gainMapOf(rotated, newW, newH, p2)
         // 旋转不改变统计结果：平均增益图值一致
         var s1 = 0L
         var s2 = 0L

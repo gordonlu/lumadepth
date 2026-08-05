@@ -42,7 +42,9 @@ class AutoParametersTest {
         val a = analysisOf(TestImages.gradient(96, 96))
         val p = AutoParameters.forAnalysis(a, 1f, 1f, true)
         assertTrue(p.highlightStart in 0.30f..0.65f)
-        assertTrue(p.highlightEnd in 0.85f..1.01f)
+        // auto 模式根据直方图动态调整：end = start + 0.30（暗图可低于 0.85）
+        assertTrue(p.highlightEnd in 0.60f..1.01f)
+        assertTrue(p.highlightEnd >= p.highlightStart)
         assertTrue(p.maxGainEv in 0f..2.5f)
         assertTrue(p.maxBoost in 1f..6f)
     }

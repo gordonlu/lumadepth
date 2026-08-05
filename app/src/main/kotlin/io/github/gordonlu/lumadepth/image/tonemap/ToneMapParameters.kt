@@ -54,8 +54,9 @@ object AutoParameters {
         local01: Float,
         autoOptimize: Boolean,
     ): ToneMapParameters {
-        val intensity = intensity01.coerceIn(0f, 1f)
-        val local = local01.coerceIn(0f, 1f)
+        // NaN/Inf 等非法输入按 0 处理，保证输出总是有限值。
+        val intensity = if (intensity01.isFinite()) intensity01.coerceIn(0f, 1f) else 0f
+        val local = if (local01.isFinite()) local01.coerceIn(0f, 1f) else 0f
         val baseMaxGainEv = if (autoOptimize) autoBaseMaxGainEv(analysis) else DEFAULT_MAX_GAIN_EV
         val maxGainEv = (baseMaxGainEv * intensity * 2f).coerceIn(0f, MAX_MAX_GAIN_EV)
         val maxBoost = 2f.pow(maxGainEv).coerceIn(1f, MAX_BOOST_CAP)

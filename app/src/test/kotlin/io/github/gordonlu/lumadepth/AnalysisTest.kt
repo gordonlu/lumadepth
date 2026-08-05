@@ -38,15 +38,15 @@ internal object TestImages {
         )
     }
 
-    /** 转置（模拟 90° 旋转后的像素布局）。 */
-    fun transpose(pixels: IntArray, width: Int, height: Int): Pair<IntArray, Int> {
+    /** 转置（模拟 90° 旋转后的像素布局）。返回 (转置像素, 新宽, 新高)。 */
+    fun transpose(pixels: IntArray, width: Int, height: Int): Triple<IntArray, Int, Int> {
         val out = IntArray(pixels.size)
         for (y in 0 until height) {
             for (x in 0 until width) {
                 out[x * height + y] = pixels[y * width + x]
             }
         }
-        return out to height
+        return Triple(out, height, width)
     }
 }
 
@@ -94,7 +94,8 @@ class AnalysisTest {
 
     @Test
     fun largeHighlightArea_detected() {
-        val img = TestImages.solid(64, 48, TestImages.argb(240, 240, 240)) +
+        // 250/255 编码 ≈ 0.955 线性，属于白色区（≥0.95）
+        val img = TestImages.solid(64, 48, TestImages.argb(250, 250, 250)) +
             TestImages.solid(64, 16, 0xFF000000.toInt())
         val a = Analysis.analyze(TestImages.lumaOf(img))
         assertTrue(a.whiteFraction > 0.5f)
@@ -114,8 +115,10 @@ class AnalysisTest {
     fun landscape_vs_portrait_rotation_sameAnalysis() {
         val pixels = TestImages.gradient(120, 40)
         val a1 = Analysis.analyze(TestImages.lumaOf(pixels))
-        val (rotated, newWidth) = TestImages.transpose(pixels, 120, 40)
+        val (rotated, newWidth, newHeight) = TestImages.transpose(pixels, 120, 40)
         val a2 = Analysis.analyze(TestImages.lumaOf(rotated))
+        assertEquals(newWidth, 40)
+        assertEquals(newHeight, 120)
         assertEquals(a1.p50, a2.p50, 1e-3f)
         assertEquals(a1.p99, a2.p99, 1e-3f)
         assertEquals(a1.whiteFraction, a2.whiteFraction, 1e-3f)

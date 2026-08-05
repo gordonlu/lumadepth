@@ -31,12 +31,15 @@ object GainMapMath {
         return ln((hdrY + EPSILON_HDR) / (sdrY + EPSILON_SDR)) / ln(2f)
     }
 
-    /** 归一化 Gain Map 值（0..1）。maxBoost == minBoost 或非法输入时返回 0，避免除零。 */
+    /**
+     * 归一化 Gain Map 值（0..1）。maxBoost == minBoost 或非法输入时返回 0，避免除零。
+     * 所有对数统一使用以 2 为底（与 [log2Gain] 一致；底不同会得到错误归一化值）。
+     */
     fun normalizedValue(log2Gain: Float, minBoost: Float, maxBoost: Float, gamma: Float): Float {
         if (!log2Gain.isFinite()) return 0f
         if (!minBoost.isFinite() || !maxBoost.isFinite() || minBoost <= 0f || maxBoost <= 0f) return 0f
-        val logMin = ln(minBoost)
-        val logMax = ln(maxBoost)
+        val logMin = ln(minBoost) / ln(2f)
+        val logMax = ln(maxBoost) / ln(2f)
         val range = logMax - logMin
         if (range <= 0f) return 0f
         val v = ((log2Gain - logMin) / range).coerceIn(0f, 1f)

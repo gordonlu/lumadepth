@@ -63,9 +63,13 @@ object GainMapRenderCore {
 
             val y = yLinear[i]
             var gain = InverseTonemap.baseGainFor(y, p)
-            // 白色保护：低纹理 + 剪裁 → 限制增益
+            // 白色保护：低纹理 + 剪裁 → 限制增益。
+            // 大面积无纹理的纯白区域（天空、白墙）完全保护（gain → 1）；
+            // 有纹理的剪裁区（如云层）按强度部分保护。
             val whiteMask = (1f - texture) * clippedMask[i]
-            gain = InverseTonemap.applyWhiteProtection(gain, whiteMask, p.whiteProtectionStrength)
+            val isFlatWhite = clippedMask[i] > 0.9f && texture < 0.3f
+            val protectionStrength = if (isFlatWhite) 1f else p.whiteProtectionStrength
+            gain = InverseTonemap.applyWhiteProtection(gain, whiteMask, protectionStrength)
 
             // 局部增强（弱）：log 亮度 unsharp，边缘减弱
             if (p.localEnhancement > 0f) {

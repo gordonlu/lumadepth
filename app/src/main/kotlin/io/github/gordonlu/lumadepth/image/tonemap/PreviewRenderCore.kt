@@ -58,7 +58,9 @@ object PreviewRenderCore {
             val y = yLinear[i]
             var gain = InverseTonemap.baseGainFor(y, p)
             val whiteMask = (1f - texture) * clippedMask[i]
-            gain = InverseTonemap.applyWhiteProtection(gain, whiteMask, p.whiteProtectionStrength)
+            val isFlatWhite = clippedMask[i] > 0.9f && texture < 0.3f
+            val protectionStrength = if (isFlatWhite) 1f else p.whiteProtectionStrength
+            gain = InverseTonemap.applyWhiteProtection(gain, whiteMask, protectionStrength)
             if (p.localEnhancement > 0f) {
                 val k = p.localEnhancement * 0.15f * (1f - 0.7f * texture)
                 val localLogGain = (logY[i] - blurLogY[i]) * k

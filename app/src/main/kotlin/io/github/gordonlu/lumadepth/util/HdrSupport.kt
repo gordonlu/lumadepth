@@ -18,5 +18,5 @@ object HdrSupport {
 
     /** 纯函数：按 display 支持的 HDR 类型数组判断是否支持 HDR 显示。 */
     fun isHdrCapable(supportedHdrTypes: IntArray?): Boolean =
-        !supportedHdrTypes.isNullOrEmpty()
+        supportedHdrTypes != null && supportedHdrTypes.size > 0
 }

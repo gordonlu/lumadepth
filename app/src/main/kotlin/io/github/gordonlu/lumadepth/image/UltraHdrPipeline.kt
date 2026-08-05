@@ -66,7 +66,7 @@ class UltraHdrPipeline(
         return analyzer.analyze(uri)
     }
 
-    /** 渲染 HDR 效果预览（SDR 模拟，不写盘）。 */
+    /** 渲染 HDR 效果预览（SDR 模拟，不写盘）。在降采样尺寸上计算以控制内存峰值。 */
     suspend fun renderPreview(sdr: Bitmap, parameters: EffectParameters, analysis: AnalysisResult): Bitmap =
         withContext(Dispatchers.Default) {
             val params = AutoParameters.forAnalysis(
@@ -76,7 +76,25 @@ class UltraHdrPipeline(
                 parameters.autoOptimize,
                 parameters.highQuality,
             )
-            previewRenderer.render(sdr, params)
+            val scale = minOf(
+                1f,
+                PREVIEW_RENDER_EDGE.toFloat() / maxOf(sdr.width, sdr.height),
+            )
+            if (scale < 1f) {
+                val small = Bitmap.createScaledBitmap(
+                    sdr,
+                    (sdr.width * scale).toInt().coerceAtLeast(1),
+                    (sdr.height * scale).toInt().coerceAtLeast(1),
+                    true,
+                )
+                try {
+                    previewRenderer.render(small, params)
+                } finally {
+                    small.recycle()
+                }
+            } else {
+                previewRenderer.render(sdr, params)
+            }
         }
 
     /**
@@ -124,8 +142,16 @@ class UltraHdrPipeline(
             }
             var gainMap: Bitmap? = null
             try {
-                gainMap = withContext(Dispatchers.Default) {
-                    gainMapRenderer.render(gainMapSource, params)
+                gainMap = try {
+                    withContext(Dispatchers.Default) {
+                        gainMapRenderer.render(gainMapSource, params)
+                    }
+                } catch (e: OutOfMemoryError) {
+                    throw LumaDepthException(
+                        LumaErrorType.INSUFFICIENT_MEMORY,
+                        context.getString(R.string.error_insufficient_memory),
+                        e,
+                    )
                 }
 
                 stage(Stage.ENCODING)
@@ -200,6 +226,10 @@ class UltraHdrPipeline(
 
     companion object {
         const val JPEG_QUALITY = 95
+
+        /** 预览渲染最长边（像素计算尺寸，控制内存峰值）。 */
+        const val PREVIEW_RENDER_EDGE = 800
+
         private const val TAG = "LumaDepthPipeline"
     }
 

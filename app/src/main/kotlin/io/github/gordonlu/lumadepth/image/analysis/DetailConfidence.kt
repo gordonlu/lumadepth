@@ -108,23 +108,20 @@ object DetailConfidence {
 
         // 信噪比
         val snrConfidence = FloatArray(n)
-        val snrLargeConfidence = FloatArray(n)
+        val persistence = FloatArray(n)
         for (i in 0 until n) {
             val snr = max(residual[i], 0f) / (sigma[i] + eps)
-            snrConfidence[i] = smoothstep(SNR_LOW, SNR_HIGH, snr)
+            val snrConf = smoothstep(SNR_LOW, SNR_HIGH, snr)
+            snrConfidence[i] = snrConf
             val snrLarge = max(residualLarge[i], 0f) / (sigma[i] + eps)
-            snrLargeConfidence[i] = smoothstep(SNR_LOW, SNR_HIGH, snrLarge)
+            val snrLargeConf = smoothstep(SNR_LOW, SNR_HIGH, snrLarge)
+            // 多尺度持续性：两个尺度都显著时加成；小尺度单独显著（高频纹理、
+            // 小型亮点）仍保留 70% 权重（纯噪声在两个尺度都不显著）。
+            persistence[i] = maxOf(0.7f * snrConf, minOf(snrConf, snrLargeConf))
         }
 
         // 邻域同向支持：residual > k×sigma 的像素占比
         val supportConfidence = computeSupportConfidence(residual, sigma, width, height, eps)
-
-        // 多尺度持续性：两个尺度都显著时加成；小尺度单独显著（高频纹理、
-        // 小型亮点）仍保留 70% 权重（纯噪声在两个尺度都不显著）。
-        val persistence = FloatArray(n)
-        for (i in 0 until n) {
-            persistence[i] = maxOf(0.7f * snrConfidence[i], minOf(snrConfidence[i], snrLargeConfidence[i]))
-        }
 
         // 色噪抑制：色度局部波动 / 亮度残差
         val chromaNoise = computeChromaNoise(
@@ -191,6 +188,7 @@ object DetailConfidence {
         val gw = (width + stride - 1) / stride
         val gh = (height + stride - 1) / stride
         val window = FloatArray(NOISE_WINDOW * NOISE_WINDOW)
+        val scratch = FloatArray(NOISE_WINDOW * NOISE_WINDOW)
         val grid = FloatArray(gw * gh)
         val half = NOISE_WINDOW / 2
         for (gy in 0 until gh) {
@@ -207,7 +205,7 @@ object DetailConfidence {
                         window[count++] = residual[yy * width + xx]
                     }
                 }
-                val sigma = robustSigma(window, count)
+                val sigma = robustSigma(window, count, scratch)
                 grid[gy * gw + gx] = if (sigma > 0f) sigma else eps
             }
         }
@@ -235,17 +233,17 @@ object DetailConfidence {
         return out
     }
 
-    /** 1.4826 × MAD（残差窗口内相对中值的绝对偏差中位数）。 */
-    private fun robustSigma(values: FloatArray, count: Int): Float {
+    /** 1.4826 × MAD（残差窗口内相对中值的绝对偏差中位数）。复用 scratch 避免分配。 */
+    private fun robustSigma(values: FloatArray, count: Int, scratch: FloatArray): Float {
         if (count <= 0) return 0f
-        val sorted = values.copyOfRange(0, count)
-        sorted.sort()
-        val median = sorted[count / 2]
+        System.arraycopy(values, 0, scratch, 0, count)
+        scratch.sort(0, count)
+        val median = scratch[count / 2]
         for (i in 0 until count) {
-            sorted[i] = abs(sorted[i] - median)
+            scratch[i] = abs(scratch[i] - median)
         }
-        sorted.sort()
-        return 1.4826f * sorted[count / 2]
+        scratch.sort(0, count)
+        return 1.4826f * scratch[count / 2]
     }
 
     /** 邻域同向支持置信度。 */

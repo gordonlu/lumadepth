@@ -211,11 +211,18 @@ class EditorViewModel(
         val parameters = EffectParameters(
             state.intensity01, state.local01, state.autoOptimize, state.highQuality,
         )
-        val hdr = pipeline.renderPreview(sdr, parameters, analysis)
-        // 释放上一份预览图，避免累积。
-        val old = _uiState.value.hdrPreview
-        _uiState.update { it.copy(hdrPreview = hdr) }
-        if (old !== hdr) old?.recycle()
+        try {
+            val hdr = pipeline.renderPreview(sdr, parameters, analysis)
+            // 释放上一份预览图，避免累积。
+            val old = _uiState.value.hdrPreview
+            _uiState.update { it.copy(hdrPreview = hdr) }
+            if (old !== hdr) old?.recycle()
+        } catch (e: OutOfMemoryError) {
+            // 预览失败不崩溃：提示并保持原图显示。
+            _uiState.update {
+                it.copy(previewError = appString(R.string.error_insufficient_memory))
+            }
+        }
     }
 
     private fun releasePreviewBitmaps() {

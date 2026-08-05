@@ -34,6 +34,7 @@ object IsolatedPeakSuppression {
         if (threshold <= 0f || suppression <= 0f) return gainValues
         val out = gainValues.copyOf()
         val window = FloatArray(9)
+        val scratch = FloatArray(9)
         for (y in 0 until height) {
             for (x in 0 until width) {
                 val i = y * width + x
@@ -48,7 +49,7 @@ object IsolatedPeakSuppression {
                     }
                 }
                 if (count < 3) continue
-                val median = quickSelectMedian(window, count)
+                val median = quickSelectMedian(window, count, scratch)
                 val v = gainValues[i]
                 if (v - median > threshold) {
                     // 邻域支持检查：3x3 内（除自身位置）还有其他显著高值像素
@@ -73,9 +74,9 @@ object IsolatedPeakSuppression {
         return out
     }
 
-    private fun quickSelectMedian(values: FloatArray, count: Int): Float {
-        val sorted = values.copyOfRange(0, count)
-        sorted.sort()
-        return sorted[count / 2]
+    private fun quickSelectMedian(values: FloatArray, count: Int, scratch: FloatArray): Float {
+        System.arraycopy(values, 0, scratch, 0, count)
+        scratch.sort(0, count)
+        return scratch[count / 2]
     }
 }

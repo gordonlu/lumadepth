@@ -59,7 +59,8 @@ object PreviewRenderCore {
             var gain = InverseTonemap.baseGainFor(y, p)
             val whiteMask = (1f - texture) * clippedMask[i]
             val isFlatWhite = clippedMask[i] > 0.9f && texture < 0.3f
-            val protectionStrength = if (isFlatWhite) 1f else p.whiteProtectionStrength
+            val protectionStrength =
+                if (isFlatWhite && p.whiteProtectionStrength > 0f) 1f else p.whiteProtectionStrength
             gain = InverseTonemap.applyWhiteProtection(gain, whiteMask, protectionStrength)
             if (p.localEnhancement > 0f) {
                 val k = p.localEnhancement * 0.15f * (1f - 0.7f * texture)

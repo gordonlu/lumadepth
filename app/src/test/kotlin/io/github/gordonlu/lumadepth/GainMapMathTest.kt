@@ -20,10 +20,11 @@ class GainMapMathTest {
 
     @Test
     fun fullGain_encodedToOne() {
-        // sdrY=1, toneGain=maxBoost → hdrY=maxBoost → logGain=log2(maxBoost) → value=1
+        // sdrY=1, toneGain=maxBoost → hdrY=maxBoost → logGain≈log2(maxBoost) → value≈1
+        // （epsilon 机制使比值略小于精确的 maxBoost，值约 0.99）
         val maxBoost = 2.2f
         val v = GainMapMath.gainMapValueForPixel(sdrY = 1f, toneGain = maxBoost, minBoost = 1f, maxBoost = maxBoost, gamma = 1f)
-        assertEquals(1f, v, 1e-3f)
+        assertEquals(1f, v, 0.02f)
     }
 
     @Test

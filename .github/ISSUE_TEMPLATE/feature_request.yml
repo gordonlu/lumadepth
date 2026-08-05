@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest an idea for LumaDepth
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to see?
+      description: Describe the feature and why it is useful.
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      description: Does this feature fit the project direction?
+      options:
+        - label: It is a local, offline image feature
+        - label: It does not require network access or user accounts
+        - label: It can be built with commercially permissive licenses

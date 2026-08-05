@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a problem with LumaDepth
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Describe the problem. What did you expect, and what actually happened?
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device & Android version
+      description: e.g. Pixel 7, Android 14
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: LumaDepth version
+      description: Version shown on the home screen
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Input photo type
+      options:
+        - JPEG
+        - PNG
+        - WebP
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error message shown in the app
+      description: Copy the error text shown on screen, if any.

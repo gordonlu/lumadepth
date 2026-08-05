@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LumaDepth</string>
+    <string name="app_subtitle">让照片拥有更真实的光与深度</string>
+    <string name="app_description">一款完全离线的计算摄影工具。将普通 SDR 照片转换为真正包含 Gain Map 的 Ultra HDR JPEG。</string>
+    <string name="pick_photo">选择照片</string>
+    <string name="offline_note">完全离线 · 照片不会上传</string>
+    <string name="version_label">版本 %1$s</string>
+
+    <!-- Editor -->
+    <string name="editor_title">Ultra HDR</string>
+    <string name="back">返回</string>
+    <string name="hdr_intensity">HDR 强度</string>
+    <string name="local_enhancement">局部增强</string>
+    <string name="auto_optimize">自动优化</string>
+    <string name="auto_optimize_desc">根据照片亮度自动调节参数</string>
+    <string name="export">导出</string>
+    <string name="compare_label">拖动对比</string>
+    <string name="original">原图</string>
+    <string name="hdr_preview">HDR 预览</string>
+    <string name="no_hdr_display_hint">当前设备不支持真实 HDR 预览，导出的照片仍可在支持 Ultra HDR 的设备上查看。</string>
+    <string name="hdr_display_hint">设备支持 HDR 显示，导出后可在支持 Ultra HDR 的应用中查看真实效果。</string>
+
+    <!-- Stages -->
+    <string name="stage_reading">正在读取照片</string>
+    <string name="stage_analyzing">正在分析亮度</string>
+    <string name="stage_tone_mapping">正在生成 HDR 效果</string>
+    <string name="stage_gain_map">正在生成 Gain Map</string>
+    <string name="stage_encoding">正在编码 Ultra HDR</string>
+    <string name="stage_verifying">正在验证输出文件</string>
+    <string name="stage_saving">正在保存到相册</string>
+
+    <!-- Result -->
+    <string name="result_saved">保存成功</string>
+    <string name="result_failed">处理失败</string>
+    <string name="result_file_name">文件名</string>
+    <string name="result_dimensions">图片尺寸</string>
+    <string name="result_file_size">文件大小</string>
+    <string name="result_gainmap_size">Gain Map 尺寸</string>
+    <string name="result_has_gainmap">已检测到 Gain Map</string>
+    <string name="result_location">保存位置</string>
+    <string name="result_location_desc">系统相册 · Pictures/LumaDepth</string>
+    <string name="result_ok">完成</string>
+    <string name="result_retry">重试</string>
+    <string name="result_verified">输出文件已重新读取并验证通过</string>
+
+    <!-- Errors -->
+    <string name="error_pick_cancelled">已取消选择照片</string>
+    <string name="error_decode_failed">无法读取这张照片，可能格式不受支持或文件已损坏。</string>
+    <string name="error_out_of_memory">照片尺寸过大，内存不足。请尝试较小的图片。</string>
+    <string name="error_encode_failed">Ultra HDR 编码失败。</string>
+    <string name="error_verify_failed">输出文件验证失败：%1$s</string>
+    <string name="error_save_failed">保存到相册失败，请检查存储空间。</string>
+    <string name="error_unknown">处理失败：%1$s</string>
+</resources>

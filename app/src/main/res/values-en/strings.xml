@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LumaDepth</string>
+    <string name="app_subtitle">Realistic light and depth for your photos</string>
+    <string name="app_description">A fully offline computational photography tool. Convert ordinary SDR photos into true Ultra HDR JPEGs with a real Gain Map.</string>
+    <string name="pick_photo">Pick a photo</string>
+    <string name="offline_note">Fully offline · photos are never uploaded</string>
+    <string name="version_label">Version %1$s</string>
+
+    <string name="editor_title">Ultra HDR</string>
+    <string name="back">Back</string>
+    <string name="hdr_intensity">HDR intensity</string>
+    <string name="local_enhancement">Local enhancement</string>
+    <string name="auto_optimize">Auto optimize</string>
+    <string name="auto_optimize_desc">Adjust parameters based on the photo brightness</string>
+    <string name="export">Export</string>
+    <string name="compare_label">Drag to compare</string>
+    <string name="original">Original</string>
+    <string name="hdr_preview">HDR preview</string>
+    <string name="no_hdr_display_hint">This device cannot preview real HDR. The exported photo will still be viewable on Ultra HDR capable devices.</string>
+    <string name="hdr_display_hint">This device supports HDR. Export to see the real effect in an Ultra HDR capable app.</string>
+
+    <string name="stage_reading">Reading photo</string>
+    <string name="stage_analyzing">Analyzing brightness</string>
+    <string name="stage_tone_mapping">Generating HDR effect</string>
+    <string name="stage_gain_map">Generating Gain Map</string>
+    <string name="stage_encoding">Encoding Ultra HDR</string>
+    <string name="stage_verifying">Verifying output file</string>
+    <string name="stage_saving">Saving to gallery</string>
+
+    <string name="result_saved">Saved</string>
+    <string name="result_failed">Processing failed</string>
+    <string name="result_file_name">File name</string>
+    <string name="result_dimensions">Dimensions</string>
+    <string name="result_file_size">File size</string>
+    <string name="result_gainmap_size">Gain Map size</string>
+    <string name="result_has_gainmap">Gain Map detected</string>
+    <string name="result_location">Location</string>
+    <string name="result_location_desc">Gallery · Pictures/LumaDepth</string>
+    <string name="result_ok">Done</string>
+    <string name="result_retry">Retry</string>
+    <string name="result_verified">Output file re-read and verified</string>
+
+    <string name="error_pick_cancelled">Photo selection cancelled</string>
+    <string name="error_decode_failed">Cannot read this photo. The format may be unsupported or the file damaged.</string>
+    <string name="error_out_of_memory">Photo is too large and ran out of memory. Try a smaller image.</string>
+    <string name="error_encode_failed">Ultra HDR encoding failed.</string>
+    <string name="error_verify_failed">Output verification failed: %1$s</string>
+    <string name="error_save_failed">Could not save to gallery. Check storage space.</string>
+    <string name="error_unknown">Processing failed: %1$s</string>
+</resources>

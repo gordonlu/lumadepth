@@ -1,0 +1,38 @@
+name: Android Instrumented Tests (Emulator)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  instrumented:
+    name: Ultra HDR encode/verify on emulator
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Run instrumented tests on API 34 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: ./gradlew connectedDebugAndroidTest

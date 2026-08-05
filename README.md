@@ -46,8 +46,8 @@ LumaDepth 是一款完全离线的移动端计算摄影工具。首个功能是�
 
 | 状态 | 说明 |
 | --- | --- |
-| [Android CI](https://github.com/gordonlu/lumadepth/actions/workflows/android.yml) | 单元测试 + Lint + Debug APK 构建 |
-| [Emulator Tests](https://github.com/gordonlu/lumadepth/actions/workflows/android-emulator.yml) | API 34 模拟器上的 Ultra HDR 编码/验证插桩测试 |
+| [Android CI](https://github.com/gordonlu/lumadepth/actions/workflows/android.yml) | 72 个 JVM 单元测试 + Lint + Debug APK 构建，全部通过 |
+| [Emulator Tests](https://github.com/gordonlu/lumadepth/actions/workflows/android-emulator.yml) | API 34 模拟器插桩测试：Ultra HDR 编码 → 重新解码 → hasGainmap 验证、MediaStore 保存验证，全部通过 |
 
 **下载 APK**：打开 [Actions](https://github.com/gordonlu/lumadepth/actions) →
 选择最新一次 **Android CI** 运行 → 底部 Artifacts →

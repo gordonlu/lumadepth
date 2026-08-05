@@ -54,7 +54,7 @@ class RenderCoreV011Test {
             sumClean += gainMapValue(gmClean[i])
             sumNoisy += gainMapValue(gmNoisy[i])
         }
-        assertTrue("噪图增益不应高于无噪图", sumNoisy <= sumClean + 1e-4f)
+        assertTrue("噪图增益不应高于无噪图 sumClean=$sumClean sumNoisy=$sumNoisy", sumNoisy <= sumClean + 1e-4f)
     }
 
     /** 高光分类：天空（大/贴边/平坦）与点光源（小/内部/纹理）区分。 */

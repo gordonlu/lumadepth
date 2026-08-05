@@ -5,6 +5,7 @@ package io.github.gordonlu.lumadepth.image.gainmap
 
 import io.github.gordonlu.lumadepth.image.analysis.HighlightClassifier
 import io.github.gordonlu.lumadepth.image.analysis.NoiseEstimation
+import io.github.gordonlu.lumadepth.image.analysis.SkinProtection
 import io.github.gordonlu.lumadepth.image.filter.BoxFilter
 import io.github.gordonlu.lumadepth.image.filter.FastGuidedFilter
 import io.github.gordonlu.lumadepth.image.tonemap.InverseTonemap
@@ -18,17 +19,29 @@ import kotlin.math.sqrt
  * Gain Map 渲染核心（纯 JVM，ARGB_8888 IntArray ↔ IntArray）。
  * 输出为单通道灰度 Gain Map（RGB 相同，alpha=255）。
  *
- * v0.11 包含：
+ * v0.12 包含：
  *  - 高光扩展 + 阴影保护（线性空间）
- *  - 白色保护：高光区域分类（连通域 → highlightConfidence），
- *    大面积无纹理剪裁（天空/白墙）完全保护，真光源/反光保留增强
- *  - 噪声感知增益抑制：暗部噪点/JPEG 块不被增益放大
- *  - 局部增强：Fast Guided Filter 平滑 log 亮度（边缘保持，防光晕）
+ *  - 多尺度增益：全局 headroom + 区域尺度（大范围亮度）+ 细节尺度（小型亮点），
+ *    在 log 空间组合并统一限幅
+ *  - 高光区域分类（连通域 → highlightConfidence）：无细节剪裁完全保护，
+ *    真光源/反光保留增强
+ *  - 噪声感知增益抑制：暗部噪点/JPEG 块不被放大
+ *  - 非 AI 肤色保护：弱约束，避免肤色区域高光油亮
  */
 object GainMapRenderCore {
 
     const val GUIDED_RADIUS = 3
     const val GUIDED_EPS = 0.01f
+
+    /** 区域尺度：大半径边缘保持滤波（log 域），阈值对应线性亮度约 0.30 / 0.70。 */
+    internal const val REGION_RADIUS = 6
+    internal const val REGION_EPS = 0.02f
+    internal const val REGION_LOG_START = -1.2f
+    internal const val REGION_LOG_END = -0.35f
+
+    /** 细节尺度：亮细节（log 亮度差）阈值。 */
+    internal const val DETAIL_START = 0.3f
+    internal const val DETAIL_END = 0.8f
 
     /**
      * @param pixels sRGB ARGB_8888 像素（必须已按 EXIF 旋转，色彩空间为 sRGB）
@@ -37,6 +50,9 @@ object GainMapRenderCore {
     fun renderPixels(pixels: IntArray, width: Int, height: Int, p: ToneMapParameters): IntArray {
         val n = pixels.size
         val yLinear = FloatArray(n)
+        val rLinear = FloatArray(n)
+        val gLinear = FloatArray(n)
+        val bLinear = FloatArray(n)
         val logY = FloatArray(n)
         val clippedMask = FloatArray(n)
         for (i in 0 until n) {
@@ -44,6 +60,9 @@ object GainMapRenderCore {
             val r = Srgb.toLinear(((argb shr 16) and 0xFF) / 255f)
             val g = Srgb.toLinear(((argb shr 8) and 0xFF) / 255f)
             val b = Srgb.toLinear((argb and 0xFF) / 255f)
+            rLinear[i] = r
+            gLinear[i] = g
+            bLinear[i] = b
             val y = Srgb.luminanceLinear(r, g, b)
             yLinear[i] = y
             logY[i] = ln(y + 1e-4f)
@@ -68,25 +87,42 @@ object GainMapRenderCore {
         val highlightConfidence = HighlightClassifier.computeConfidence(clippedMask, variance, width, height)
         // 噪声感知抑制
         val noiseMask = NoiseEstimation.estimateNoiseMask(yLinear, blurY)
-        // 局部增强平滑（边缘保持）
-        val guidedLogY = if (p.localEnhancement > 0f) {
-            FastGuidedFilter.filter(yLinear, logY, width, height, GUIDED_RADIUS, GUIDED_EPS)
+        // 非 AI 肤色保护
+        val skinConfidence = SkinProtection.computeConfidence(rLinear, gLinear, bLinear)
+        // 多尺度：区域层（边缘保持）与细节层
+        val multiScale = p.regionGainEv > 0f || p.detailGainEv > 0f
+        val regionLogY = if (multiScale) {
+            FastGuidedFilter.filter(yLinear, logY, width, height, REGION_RADIUS, REGION_EPS)
         } else {
             null
         }
 
+        val maxLogGain = if (p.maxBoost > 1f) ln(p.maxBoost) / ln(2f) else 0f
         val out = IntArray(n)
         for (i in 0 until n) {
             val std = sqrt(variance[i])
-            // 纹理高 → texture 接近 1（细节/边缘）；平坦 → 0
             val texture = InverseTonemap.smoothstep(0.008f, 0.04f, std)
 
             val y = yLinear[i]
-            var gain = InverseTonemap.baseGainFor(y, p)
+            // 阴影保护：暗部增益趋近 1.0（shadowAllow 在暗部为 0）
+            val shadowAllow = InverseTonemap.smoothstep(p.shadowStart, p.shadowEnd, y)
 
-            // 白色保护：高光分类置信度感知。
-            // 大面积无纹理剪裁（天空/白墙，confidence 低）完全保护；
-            // 有效光源/反光（confidence 高）仅按强度部分保护。
+            // 多尺度 log 增益组合
+            val highlightMask = InverseTonemap.smoothstep(p.highlightStart, p.highlightEnd, y)
+            var logGain = p.maxGainEv * highlightMask * shadowAllow
+            if (multiScale && regionLogY != null) {
+                val regionMask = InverseTonemap.smoothstep(REGION_LOG_START, REGION_LOG_END, regionLogY[i])
+                logGain += p.regionGainEv * regionMask * shadowAllow
+                val detailLevel = logY[i] - regionLogY[i]
+                val detailMask = InverseTonemap.smoothstep(DETAIL_START, DETAIL_END, detailLevel) *
+                    (1f - noiseMask[i])
+                logGain += p.detailGainEv * detailMask
+            }
+            // 统一限幅
+            logGain = logGain.coerceIn(0f, maxLogGain)
+            var gain = 2f.pow(logGain)
+
+            // 白色保护：高光分类置信度感知
             val confidence = highlightConfidence[i]
             val flatWhite = clippedMask[i] > 0.9f && texture < 0.3f
             val protection = when {
@@ -96,17 +132,14 @@ object GainMapRenderCore {
             val whiteMask = (1f - texture) * clippedMask[i]
             gain = InverseTonemap.applyWhiteProtection(gain, whiteMask, protection)
 
-            // 噪声感知增益抑制：暗部噪声区 Gain 趋近 1
+            // 噪声感知增益抑制
             if (p.noiseSuppression > 0f) {
                 gain = 1f + (gain - 1f) * (1f - noiseMask[i] * p.noiseSuppression)
             }
 
-            // 局部增强（弱）：log 亮度 guided 平滑差，边缘处减弱
-            if (p.localEnhancement > 0f && guidedLogY != null) {
-                val k = p.localEnhancement * 0.15f * (1f - 0.7f * texture) * (1f - noiseMask[i])
-                val localLogGain = (logY[i] - guidedLogY[i]) * k
-                val localGain = 2f.pow(localLogGain.coerceIn(-0.3f, 0.3f))
-                gain = InverseTonemap.applyLocalEnhancement(gain, localGain)
+            // 肤色保护（弱约束）
+            if (p.skinProtection > 0f) {
+                gain = SkinProtection.applyProtection(gain, skinConfidence[i], p.skinProtection)
             }
 
             val v = GainMapMath.gainMapValueForPixel(y, gain, p.minBoost, p.maxBoost, GainMapMath.GAMMA)

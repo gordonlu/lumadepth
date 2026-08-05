@@ -39,7 +39,7 @@ object NoiseEstimation {
             // 相对残差：残差 / (亮度 + eps)；平坦区噪声的相对残差大，真实边缘也会被部分计入
             val residual = abs(y - blurredY[i])
             val relResidual = residual / (y + 1e-3f)
-            val noise = smoothstep(0.15f, 0.60f, relResidual)
+            val noise = smoothstep(0.10f, 0.40f, relResidual)
             mask[i] = noise * darkWeight
         }
         return mask

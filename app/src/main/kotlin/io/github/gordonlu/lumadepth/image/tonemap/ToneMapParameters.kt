@@ -9,7 +9,7 @@ import kotlin.math.pow
 
 /**
  * 逆色调映射参数。
- * 说明：minBoost 固定为 1.0（Gain Map 下限），maxBoost = 2^maxGainEv。
+ * 说明：minBoost 固定为 1.0（Gain Map 下限），maxBoost = 2^(全局+区域+细节总 headroom)。
  */
 data class ToneMapParameters(
     val highlightStart: Float,
@@ -27,6 +27,12 @@ data class ToneMapParameters(
     val maxBoost: Float,
     /** 噪声感知增益抑制强度 (0..1)：暗部噪点/JPEG 块放大抑制。 */
     val noiseSuppression: Float = 0.4f,
+    /** 区域尺度增益 (EV)：大范围亮度区域的高光增强。 */
+    val regionGainEv: Float = 0f,
+    /** 细节尺度增益 (EV)：小型亮点的增强。 */
+    val detailGainEv: Float = 0f,
+    /** 肤色保护强度 (0..1，弱约束)。 */
+    val skinProtection: Float = 0f,
 )
 
 object AutoParameters {
@@ -38,6 +44,12 @@ object AutoParameters {
     const val DEFAULT_SHADOW_START = 0.02f
     const val DEFAULT_SHADOW_END = 0.15f
     const val MAX_BOOST_CAP = 6.0f
+
+    /** 区域尺度增益占全局 headroom 的比例。 */
+    const val REGION_FACTOR = 0.25f
+
+    /** 细节尺度最大增益（EV），对应局部增强滑杆 100。 */
+    const val DETAIL_MAX_EV = 1.2f
 
     /**
      * 根据图像分析与用户参数生成 ToneMapParameters。
@@ -61,7 +73,6 @@ object AutoParameters {
         val local = if (local01.isFinite()) local01.coerceIn(0f, 1f) else 0f
         val baseMaxGainEv = if (autoOptimize) autoBaseMaxGainEv(analysis) else DEFAULT_MAX_GAIN_EV
         val maxGainEv = (baseMaxGainEv * intensity * 2f).coerceIn(0f, MAX_MAX_GAIN_EV)
-        val maxBoost = 2f.pow(maxGainEv).coerceIn(1f, MAX_BOOST_CAP)
         val (highlightStart, highlightEnd) =
             if (autoOptimize) autoHighlightRange(analysis)
             else DEFAULT_HIGHLIGHT_START to DEFAULT_HIGHLIGHT_END
@@ -80,6 +91,12 @@ object AutoParameters {
         } else {
             0.40f
         }
+        // 多尺度：区域尺度跟随全局 headroom，细节尺度跟随局部增强滑杆。
+        val regionGainEv = maxGainEv * REGION_FACTOR
+        val detailGainEv = localEnhancement * DETAIL_MAX_EV
+        // 总 headroom = 全局 + 区域 + 细节（maxBoost 作为编码上限，涵盖所有尺度）。
+        val maxBoost = 2f.pow(maxGainEv + regionGainEv + detailGainEv)
+            .coerceIn(1f, MAX_BOOST_CAP)
         return ToneMapParameters(
             highlightStart = highlightStart,
             highlightEnd = highlightEnd,
@@ -92,6 +109,9 @@ object AutoParameters {
             minBoost = 1f,
             maxBoost = maxBoost,
             noiseSuppression = noiseSuppression,
+            regionGainEv = regionGainEv,
+            detailGainEv = detailGainEv,
+            skinProtection = 0.35f,
         )
     }
 

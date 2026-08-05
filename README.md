@@ -71,27 +71,16 @@ LumaDepth 是一款完全离线的移动端计算摄影工具。首个功能是�
 
 ## 技术实现概览
 
-- **技术路线：Android 系统 Gainmap API（路线 A）**。使用 `android.graphics.Gainmap`、
-  `Bitmap.setGainmap()`、`Bitmap.compress(JPEG)` 编码，`Bitmap.hasGainmap()` 验证。
-  不引入 JNI、NDK、CMake 与任何第三方编码库（libultrahdr 由 Android 平台内部提供）。
-  选择理由：API 34+ 官方支持、文档明确支持 1/4 尺寸 Gain Map、编码/解码/验证全链路
-  都由平台保证正确性与兼容性，维护成本最低。
-- **sRGB → 线性光**：所有增益计算基于线性亮度 `Y = 0.2126R + 0.7152G + 0.0722B`。
-- **亮度分析**：缩略图直方图统计 P1/P5/P20/P50/P90/P95/P99、黑/阴影/中间调/高光/白占比、
-  RGB 同时剪裁比例、动态范围（档）。
-- **逆色调映射**：`highlightMask = smoothstep(highlightStart, highlightEnd, Y)`，
-  `gainEv = maxGainEv × highlightMask`，`Y_hdr = Y_sdr × 2^gainEv`，阴影保护使暗部增益趋近 1.0。
-- **白色保护**：大面积、低纹理、已剪裁的纯白区域（天空、白墙）限制增益；
-  小面积点光源、太阳反光仍正常增强。丢失的高光纹理不会伪造恢复。
-- **色彩保护**：单通道亮度增益（保色相）+ 预览渲染使用柔和肩部压缩与饱和度保护。
-- **局部增强**：log 亮度弱 unsharp（默认 20/100，自动模式减半），边缘处自动减弱防光晕。
-- **Gain Map**：原图 1/4 尺寸单通道灰度；对数空间归一化
-  `normalized = clamp((log2(gain) - log2(minBoost)) / (log2(maxBoost) - log2(minBoost)), 0, 1)`。
-  `minBoost = 1.0`，`maxBoost = 2^maxGainEv`（≤ 6.0），gamma = 1.0。
-- **输出验证**：重新解码输出文件，检查 hasGainmap()、Gain Map 尺寸与主图比例、
-  Ratio Min/Max、Gamma、无 NaN，保存到相册后再验证一次。
-- **线程模型**：解码/编码在 IO 线程，像素计算在 Default 线程，UI 永不阻塞；
-  预览参数防抖（150ms）+ 取消旧任务。
+- **技术路线**：使用 Android 14 官方 Gainmap API 完成 Ultra HDR 编码与验证，不依赖第三方编码库，无原生代码。
+- **图像处理**：完全离线、确定性、可重复，全部由 LumaDepth 自行实现：
+  - 线性光域亮度分析（直方图与统计特征）；
+  - SDR-to-HDR 逆色调映射（高光扩展 + 阴影保护 + 大面积白色保护）；
+  - 高光区域分类（区分灯光、反光与无细节剪裁区）；
+  - 噪声感知的增益抑制（避免暗部噪点被 HDR 增益放大）；
+  - 边缘保持的局部增强；
+  - Gain Map 生成（单通道，约为原图 1/4 尺寸）与元数据封装。
+- **输出验证**：导出后重新读取文件，确认包含 Gain Map 且元数据合法；保存到相册后再次验证。
+- **线程模型**：文件读写与编码在 IO 线程，像素计算在后台线程，UI 永不阻塞；预览参数防抖并自动取消旧任务。
 
 ## Ultra HDR 与普通滤镜的区别
 

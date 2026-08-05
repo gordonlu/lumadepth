@@ -52,6 +52,21 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk artifacts/LumaDepth-debug.apk
           ls -la artifacts/
 
+      - name: Verify merged manifest has no unnecessary permissions
+        run: |
+          MANIFEST=app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml
+          if [ -f "$MANIFEST" ]; then
+            if grep -q "READ_MEDIA_IMAGES\|READ_MEDIA_VIDEO\|READ_MEDIA_VISUAL_USER_SELECTED\|READ_EXTERNAL_STORAGE\|WRITE_EXTERNAL_STORAGE\|MANAGE_EXTERNAL_STORAGE\|android.permission.INTERNET" "$MANIFEST"; then
+              echo "FAIL: unnecessary permission found in merged manifest"
+              grep -n "permission" "$MANIFEST"
+              exit 1
+            fi
+            echo "Manifest permission check: OK (no storage/network permissions)"
+          else
+            echo "merged manifest not found at expected path, searching..."
+            find app/build/intermediates -name "AndroidManifest.xml" | head -5
+          fi
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:

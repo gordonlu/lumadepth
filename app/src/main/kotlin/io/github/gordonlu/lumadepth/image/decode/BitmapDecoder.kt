@@ -11,12 +11,13 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import io.github.gordonlu.lumadepth.R
 import io.github.gordonlu.lumadepth.util.LumaDepthException
+import io.github.gordonlu.lumadepth.util.LumaErrorType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
  * 图片解码：统一使用 ImageDecoder（自动处理 EXIF 旋转与色彩空间），
- * 按用途限制分辨率，OOM 时逐级降级。
+ * 按用途限制分辨率；导出前执行内存预算，OOM 时逐级降级。
  */
 class BitmapDecoder(private val context: Context) {
 
@@ -28,30 +29,44 @@ class BitmapDecoder(private val context: Context) {
     suspend fun decodeAnalysis(uri: Uri): Bitmap =
         decodeCapped(uri, listOf(ANALYSIS_EDGE))
 
-    /** 导出主图：从 3840 起，OOM 时降级到更小尺寸。 */
-    suspend fun decodeForExport(uri: Uri): Bitmap =
-        decodeCapped(uri, EXPORT_EDGE_CANDIDATES)
+    /**
+     * 导出主图：先按内存预算选择可用尺寸（从 3840 起），OOM 时继续降级。
+     * 所有候选都超出预算时抛出 IMAGE_TOO_LARGE / INSUFFICIENT_MEMORY。
+     */
+    suspend fun decodeForExport(uri: Uri): Bitmap {
+        val maxMemory = Runtime.getRuntime().maxMemory()
+        val firstEdge = MemoryBudget.pickEdge(EXPORT_EDGE_CANDIDATES, maxMemory)
+            ?: throw LumaDepthException(
+                LumaErrorType.IMAGE_TOO_LARGE,
+                context.getString(R.string.error_image_too_large),
+            )
+        val fromFirst = EXPORT_EDGE_CANDIDATES.dropWhile { it > firstEdge }
+        return decodeCapped(uri, fromFirst)
+    }
 
     private suspend fun decodeCapped(uri: Uri, edges: List<Int>): Bitmap =
         withContext(Dispatchers.IO) {
-            var lastCause: Throwable? = null
+            var lastOom: Throwable? = null
             for (edge in edges) {
                 try {
                     return@withContext decodeOnce(uri, edge)
                 } catch (e: OutOfMemoryError) {
-                    lastCause = e
+                    lastOom = e
                 } catch (e: LumaDepthException) {
                     throw e
                 } catch (e: Exception) {
-                    throw LumaDepthException(context.getString(R.string.error_decode_failed), e)
+                    throw LumaDepthException(LumaErrorType.DECODE_FAILED, errorDecode(), e)
                 }
             }
-            throw LumaDepthException(context.getString(R.string.error_out_of_memory), lastCause)
+            if (lastOom != null) {
+                throw LumaDepthException(LumaErrorType.INSUFFICIENT_MEMORY, errorMemory(), lastOom)
+            }
+            throw LumaDepthException(LumaErrorType.DECODE_FAILED, errorDecode(), lastOom)
         }
 
     private fun decodeOnce(uri: Uri, longestEdge: Int): Bitmap {
         val source = ImageDecoder.createSource(context.contentResolver, uri)
-        val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+        val decoded = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             decoder.isMutableRequired = true
             val scale = minOf(
@@ -65,21 +80,29 @@ class BitmapDecoder(private val context: Context) {
                 )
             }
         }
-        return toSrgb(bitmap)
+        return toSrgb(decoded)
     }
 
-    /** 统一转换到 sRGB 色彩空间（编码域），保证像素计算一致。 */
+    /** 统一转换到 sRGB 色彩空间（编码域）。需要转换时回收原图。 */
     private fun toSrgb(bitmap: Bitmap): Bitmap {
         val srgb = ColorSpace.get(ColorSpace.Named.SRGB)
         val cs = bitmap.colorSpace ?: return bitmap
         if (cs == srgb || cs.model != ColorSpace.Model.RGB) return bitmap
-        // Canvas 绘制时自动把源位图色彩转换到目标 sRGB 色彩空间。
-        val out = Bitmap.createBitmap(
-            bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888, false, srgb
-        )
-        Canvas(out).drawBitmap(bitmap, 0f, 0f, null)
+        val out = try {
+            // Canvas 绘制时自动把源位图色彩转换到目标 sRGB 色彩空间。
+            Bitmap.createBitmap(
+                bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888, false, srgb
+            ).also { target ->
+                Canvas(target).drawBitmap(bitmap, 0f, 0f, null)
+            }
+        } finally {
+            bitmap.recycle()
+        }
         return out
     }
+
+    private fun errorDecode(): String = context.getString(R.string.error_decode_failed)
+    private fun errorMemory(): String = context.getString(R.string.error_insufficient_memory)
 
     companion object {
         const val PREVIEW_EDGE = 1400

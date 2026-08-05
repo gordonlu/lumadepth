@@ -15,6 +15,7 @@
     <string name="auto_optimize">自动优化</string>
     <string name="auto_optimize_desc">根据照片亮度自动调节参数</string>
     <string name="export">导出</string>
+    <string name="cancel">取消</string>
     <string name="compare_label">拖动对比</string>
     <string name="original">原图</string>
     <string name="hdr_preview">HDR 预览</string>
@@ -46,10 +47,25 @@
 
     <!-- Errors -->
     <string name="error_pick_cancelled">已取消选择照片</string>
+    <string name="error_input_unavailable">图片已不可用，请重新选择照片。</string>
+    <string name="error_unsupported_image">不支持的图片格式，请选择 JPEG、PNG 或 WebP 图片。</string>
     <string name="error_decode_failed">无法读取这张照片，可能格式不受支持或文件已损坏。</string>
-    <string name="error_out_of_memory">照片尺寸过大，内存不足。请尝试较小的图片。</string>
+    <string name="error_image_too_large">图片尺寸过大，无法安全处理。</string>
+    <string name="error_insufficient_memory">图片过大或设备可用内存不足，请尝试较小的图片。</string>
+    <string name="error_processing_failed">图像处理失败，请重试。</string>
     <string name="error_encode_failed">Ultra HDR 编码失败。</string>
     <string name="error_verify_failed">输出文件验证失败：%1$s</string>
+    <string name="error_storage_full">存储空间不足，无法保存。</string>
     <string name="error_save_failed">保存到相册失败，请检查存储空间。</string>
     <string name="error_unknown">处理失败：%1$s</string>
+    <string name="cancelled">已取消</string>
+
+    <!-- Permissions & privacy -->
+    <string name="privacy_title">权限与隐私</string>
+    <string name="privacy_read_title">读取照片</string>
+    <string name="privacy_read_desc">LumaDepth 只能读取你通过系统照片选择器主动选择的照片，无法浏览或读取相册中的其他内容。</string>
+    <string name="privacy_write_title">保存照片</string>
+    <string name="privacy_write_desc">LumaDepth 只会向系统相册新增你主动导出的处理结果，不会修改或删除已有照片。</string>
+    <string name="privacy_network_title">网络</string>
+    <string name="privacy_network_desc">所有照片处理均在设备本地完成，照片不会上传。</string>
 </resources>

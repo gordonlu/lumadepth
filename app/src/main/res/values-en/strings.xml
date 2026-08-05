@@ -14,6 +14,7 @@
     <string name="auto_optimize">Auto optimize</string>
     <string name="auto_optimize_desc">Adjust parameters based on the photo brightness</string>
     <string name="export">Export</string>
+    <string name="cancel">Cancel</string>
     <string name="compare_label">Drag to compare</string>
     <string name="original">Original</string>
     <string name="hdr_preview">HDR preview</string>
@@ -42,10 +43,24 @@
     <string name="result_verified">Output file re-read and verified</string>
 
     <string name="error_pick_cancelled">Photo selection cancelled</string>
+    <string name="error_input_unavailable">The photo is no longer available. Please pick another one.</string>
+    <string name="error_unsupported_image">Unsupported image format. Please choose a JPEG, PNG or WebP image.</string>
     <string name="error_decode_failed">Cannot read this photo. The format may be unsupported or the file damaged.</string>
-    <string name="error_out_of_memory">Photo is too large and ran out of memory. Try a smaller image.</string>
+    <string name="error_image_too_large">The image is too large to process safely.</string>
+    <string name="error_insufficient_memory">Image is too large or the device is low on memory. Try a smaller image.</string>
+    <string name="error_processing_failed">Image processing failed. Please try again.</string>
     <string name="error_encode_failed">Ultra HDR encoding failed.</string>
     <string name="error_verify_failed">Output verification failed: %1$s</string>
+    <string name="error_storage_full">Not enough storage space to save.</string>
     <string name="error_save_failed">Could not save to gallery. Check storage space.</string>
     <string name="error_unknown">Processing failed: %1$s</string>
+    <string name="cancelled">Cancelled</string>
+
+    <string name="privacy_title">Permissions &amp; privacy</string>
+    <string name="privacy_read_title">Read photos</string>
+    <string name="privacy_read_desc">LumaDepth can only read photos you actively choose through the system photo picker. It cannot browse or read other content in your gallery.</string>
+    <string name="privacy_write_title">Save photos</string>
+    <string name="privacy_write_desc">LumaDepth only adds the results you actively export to the system gallery. It never modifies or deletes existing photos.</string>
+    <string name="privacy_network_title">Network</string>
+    <string name="privacy_network_desc">All photo processing happens on-device. Photos are never uploaded.</string>
 </resources>

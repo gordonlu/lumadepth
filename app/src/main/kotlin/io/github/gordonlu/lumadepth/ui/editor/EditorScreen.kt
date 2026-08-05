@@ -3,7 +3,6 @@
 
 package io.github.gordonlu.lumadepth.ui.editor
 
-import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +29,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.gordonlu.lumadepth.R
+import io.github.gordonlu.lumadepth.model.ProcessingState
 import io.github.gordonlu.lumadepth.model.Stage
 import io.github.gordonlu.lumadepth.ui.components.CompareSlider
 
@@ -85,10 +86,8 @@ fun EditorScreen(uri: android.net.Uri, onBack: () -> Unit) {
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // 预览
-            val sdr = state.sdrPreview
-            val hdr = state.hdrPreview
-            if (state.loading) {
+            // 预览加载阶段
+            state.previewStage?.let { stage ->
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -99,12 +98,17 @@ fun EditorScreen(uri: android.net.Uri, onBack: () -> Unit) {
                         CircularProgressIndicator()
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            text = stringResource(R.string.stage_reading),
+                            text = stageText(stage),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
-            } else if (sdr != null && hdr != null) {
+            }
+
+            // 预览
+            val sdr = state.sdrPreview
+            val hdr = state.hdrPreview
+            if (state.previewStage == null && sdr != null && hdr != null) {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = MaterialTheme.colorScheme.surface,
@@ -143,7 +147,7 @@ fun EditorScreen(uri: android.net.Uri, onBack: () -> Unit) {
             Spacer(Modifier.height(16.dp))
 
             // 参数区
-            if (state.sdrPreview != null) {
+            if (sdr != null) {
                 ParameterCard(state) { intensity, local, auto ->
                     viewModel.setHdrIntensity(intensity)
                     viewModel.setLocalEnhancement(local)
@@ -153,14 +157,38 @@ fun EditorScreen(uri: android.net.Uri, onBack: () -> Unit) {
 
             Spacer(Modifier.height(16.dp))
 
-            // 导出
-            if (state.exporting) {
-                StageIndicator(stage = state.stage)
-                Spacer(Modifier.height(8.dp))
+            // 处理状态（状态机）
+            when (val processing = state.processing) {
+                is ProcessingState.Processing -> {
+                    StageIndicator(stage = processing.stage)
+                    if (processing.cancellable) {
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = { viewModel.cancelExport() }) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+                is ProcessingState.Success -> {
+                    ResultCard(processing.result, onDone = onBack)
+                    Spacer(Modifier.height(16.dp))
+                }
+                is ProcessingState.Failed -> {
+                    ErrorCard(processing.error.message, onDismiss = { viewModel.dismissError() })
+                    Spacer(Modifier.height(16.dp))
+                }
+                ProcessingState.Cancelled -> {
+                    CancelledCard(onDismiss = { viewModel.dismissCancelled() })
+                    Spacer(Modifier.height(16.dp))
+                }
+                ProcessingState.Idle -> Unit
             }
+
+            // 导出按钮：处理中/加载中禁用
+            val busy = state.processing is ProcessingState.Processing || state.previewStage != null
             Button(
                 onClick = { viewModel.export() },
-                enabled = !state.exporting && state.sdrPreview != null && !state.loading,
+                enabled = !busy && sdr != null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
@@ -173,18 +201,10 @@ fun EditorScreen(uri: android.net.Uri, onBack: () -> Unit) {
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            // 结果
-            state.exportResult?.let { result ->
-                ResultCard(result, onDone = onBack)
+            // 预览加载错误
+            state.previewError?.let { message ->
                 Spacer(Modifier.height(16.dp))
-            }
-
-            // 错误
-            state.errorMessage?.let { message ->
-                ErrorCard(message, onDismiss = { viewModel.clearError() })
-                Spacer(Modifier.height(16.dp))
+                ErrorCard(message, onDismiss = { viewModel.dismissError() })
             }
 
             Spacer(Modifier.height(24.dp))
@@ -328,7 +348,7 @@ private fun stageText(stage: Stage?): String = when (stage) {
 }
 
 @Composable
-private fun ResultCard(result: ExportResultUi, onDone: () -> Unit) {
+private fun ResultCard(result: io.github.gordonlu.lumadepth.model.ExportResultUi, onDone: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -401,6 +421,31 @@ private fun ErrorCard(message: String, onDismiss: () -> Unit) {
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+            ) {
+                Text(stringResource(R.string.result_ok))
+            }
+        }
+    }
+}
+
+@Composable
+private fun CancelledCard(onDismiss: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.cancelled),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(12.dp))
             OutlinedButton(

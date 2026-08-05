@@ -116,5 +116,49 @@ fun HomeScreen(onPhotoPicked: (Uri) -> Unit) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(Modifier.height(24.dp))
+        PrivacyCard()
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun PrivacyCard() {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.privacy_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(10.dp))
+            PrivacyRow(stringResource(R.string.privacy_read_title), stringResource(R.string.privacy_read_desc))
+            Spacer(Modifier.height(10.dp))
+            PrivacyRow(stringResource(R.string.privacy_write_title), stringResource(R.string.privacy_write_desc))
+            Spacer(Modifier.height(10.dp))
+            PrivacyRow(stringResource(R.string.privacy_network_title), stringResource(R.string.privacy_network_desc))
+        }
+    }
+}
+
+@Composable
+private fun PrivacyRow(title: String, description: String) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

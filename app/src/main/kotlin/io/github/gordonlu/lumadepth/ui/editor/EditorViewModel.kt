@@ -9,14 +9,22 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.gordonlu.lumadepth.LumaDepthApplication
+import io.github.gordonlu.lumadepth.R
 import io.github.gordonlu.lumadepth.image.UltraHdrPipeline
 import io.github.gordonlu.lumadepth.image.analysis.AnalysisResult
 import io.github.gordonlu.lumadepth.model.EffectParameters
+import io.github.gordonlu.lumadepth.model.ExportEvent
+import io.github.gordonlu.lumadepth.model.ExportResultUi
+import io.github.gordonlu.lumadepth.model.ExportStateMachine
+import io.github.gordonlu.lumadepth.model.ProcessingError
+import io.github.gordonlu.lumadepth.model.ProcessingState
 import io.github.gordonlu.lumadepth.model.Stage
 import io.github.gordonlu.lumadepth.util.HdrSupport
 import io.github.gordonlu.lumadepth.util.LumaDepthException
+import io.github.gordonlu.lumadepth.util.LumaErrorType
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,22 +40,12 @@ data class EditorUiState(
     val intensity01: Float = EffectParameters.DEFAULT_INTENSITY,
     val local01: Float = EffectParameters.DEFAULT_LOCAL_ENHANCEMENT,
     val autoOptimize: Boolean = true,
-    val loading: Boolean = false,
-    val stage: Stage? = null,
-    val exporting: Boolean = false,
-    val errorMessage: String? = null,
-    val exportResult: ExportResultUi? = null,
-)
-
-data class ExportResultUi(
-    val fileName: String,
-    val width: Int,
-    val height: Int,
-    val fileSizeBytes: Long,
-    val gainMapWidth: Int,
-    val gainMapHeight: Int,
-    val hasGainmap: Boolean,
-    val location: String,
+    /** 选图后的解码/分析阶段（null = 无加载）。 */
+    val previewStage: Stage? = null,
+    /** 预览加载失败信息（可关闭）。 */
+    val previewError: String? = null,
+    /** 导出任务状态（状态机，单值驱动）。 */
+    val processing: ProcessingState = ProcessingState.Idle,
 )
 
 @OptIn(FlowPreview::class)
@@ -60,11 +58,12 @@ class EditorViewModel(
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
     private var uri: Uri? = null
+    private var exportJob: Job? = null
     private var hdrDisplayAvailable: Boolean = HdrSupport.isHdrDisplayAvailable(application)
 
-    /** 预览参数流：防抖后触发预览渲染，拖动滑块不会产生并发任务。 */
+    /** 预览参数流：防抖后触发预览渲染，拖动滑块不会产生并行任务。 */
     private val previewParams = MutableStateFlow(Pair(0f, 0f))
-    private var previewJob: kotlinx.coroutines.Job? = null
+    private var previewJob: Job? = null
 
     init {
         previewJob = viewModelScope.launch {
@@ -77,22 +76,37 @@ class EditorViewModel(
     }
 
     fun setUri(uri: Uri) {
+        // 更换照片时取消旧任务并释放旧图。
+        exportJob?.cancel()
+        releasePreviewBitmaps()
         this.uri = uri
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, errorMessage = null) }
+            _uiState.update {
+                it.copy(previewStage = Stage.READING, previewError = null, processing = ProcessingState.Idle)
+            }
             try {
                 val sdr = pipeline.decodePreview(uri)
-                val analysis = pipeline.analyze(uri) { stage ->
-                    _uiState.update { it.copy(stage = stage) }
+                _uiState.update { it.copy(previewStage = Stage.ANALYZING) }
+                val analysis = pipeline.analyze(uri) {}
+                _uiState.update {
+                    it.copy(
+                        previewStage = null,
+                        sdrPreview = sdr,
+                        analysis = analysis,
+                    )
                 }
-                _uiState.update { it.copy(loading = false, stage = null, sdrPreview = sdr, analysis = analysis) }
                 triggerPreview()
-            } catch (e: LumaDepthException) {
-                _uiState.update { it.copy(loading = false, errorMessage = e.userMessage) }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: LumaDepthException) {
+                _uiState.update { it.copy(previewStage = null, previewError = e.userMessage) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(loading = false, errorMessage = e.message ?: "未知错误") }
+                _uiState.update {
+                    it.copy(
+                        previewStage = null,
+                        previewError = appString(R.string.error_unknown, e.message ?: "unknown"),
+                    )
+                }
             }
         }
     }
@@ -115,19 +129,19 @@ class EditorViewModel(
     fun export() {
         val current = _uiState.value
         val currentUri = uri ?: return
-        if (current.exporting || current.sdrPreview == null) return
-        viewModelScope.launch {
-            _uiState.update { it.copy(exporting = true, stage = null, errorMessage = null, exportResult = null) }
+        // 同一时间最多一个导出任务。
+        if (current.processing is ProcessingState.Processing) return
+        if (current.sdrPreview == null) return
+        val job = viewModelScope.launch {
             try {
                 val parameters = EffectParameters(current.intensity01, current.local01, current.autoOptimize)
+                updateState(ExportEvent.Started(Stage.READING))
                 val result = pipeline.export(currentUri, parameters, current.analysis) { stage ->
-                    _uiState.update { it.copy(stage = stage) }
+                    updateState(ExportEvent.StageChanged(stage))
                 }
-                _uiState.update {
-                    it.copy(
-                        exporting = false,
-                        stage = null,
-                        exportResult = ExportResultUi(
+                updateState(
+                    ExportEvent.Succeeded(
+                        ExportResultUi(
                             fileName = result.displayName,
                             width = result.width,
                             height = result.height,
@@ -138,22 +152,43 @@ class EditorViewModel(
                             location = "Pictures/LumaDepth",
                         ),
                     )
-                }
-            } catch (e: LumaDepthException) {
-                _uiState.update { it.copy(exporting = false, stage = null, errorMessage = e.userMessage) }
+                )
             } catch (e: CancellationException) {
-                throw e
+                // 取消是正常状态，不显示错误。
+                updateState(ExportEvent.Cancelled)
+            } catch (e: LumaDepthException) {
+                updateState(ExportEvent.Failed(ProcessingError(e.type, e.userMessage)))
             } catch (e: Exception) {
-                _uiState.update { it.copy(exporting = false, stage = null, errorMessage = e.message ?: "未知错误") }
+                updateState(
+                    ExportEvent.Failed(
+                        ProcessingError(
+                            LumaErrorType.PROCESSING_FAILED,
+                            appString(R.string.error_unknown, e.message ?: "unknown"),
+                        ),
+                    )
+                )
             }
         }
+        exportJob = job
     }
 
-    fun clearError() {
-        _uiState.update { it.copy(errorMessage = null) }
+    fun cancelExport() {
+        exportJob?.cancel()
+    }
+
+    fun dismissError() {
+        _uiState.update { it.copy(processing = ProcessingState.Idle) }
+    }
+
+    fun dismissCancelled() {
+        _uiState.update { it.copy(processing = ProcessingState.Idle) }
     }
 
     fun isHdrDisplayAvailable(): Boolean = hdrDisplayAvailable
+
+    private fun updateState(event: ExportEvent) {
+        _uiState.update { it.copy(processing = ExportStateMachine.transition(it.processing, event)) }
+    }
 
     private fun triggerPreview() {
         val state = _uiState.value
@@ -166,13 +201,26 @@ class EditorViewModel(
         val analysis = state.analysis ?: return
         val parameters = EffectParameters(state.intensity01, state.local01, state.autoOptimize)
         val hdr = pipeline.renderPreview(sdr, parameters, analysis)
+        // 释放上一份预览图，避免累积。
+        val old = _uiState.value.hdrPreview
         _uiState.update { it.copy(hdrPreview = hdr) }
+        if (old !== hdr) old?.recycle()
     }
+
+    private fun releasePreviewBitmaps() {
+        val state = _uiState.value
+        state.sdrPreview?.recycle()
+        state.hdrPreview?.recycle()
+        _uiState.update { it.copy(sdrPreview = null, hdrPreview = null, analysis = null) }
+    }
+
+    private fun appString(resId: Int, vararg args: Any): String =
+        getApplication<Application>().getString(resId, *args)
 
     override fun onCleared() {
         previewJob?.cancel()
-        _uiState.value.sdrPreview?.recycle()
-        _uiState.value.hdrPreview?.recycle()
+        exportJob?.cancel()
+        releasePreviewBitmaps()
         super.onCleared()
     }
 

@@ -3,7 +3,6 @@
 
 package io.github.gordonlu.lumadepth
 
-import android.view.Display
 import io.github.gordonlu.lumadepth.util.HdrSupport
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -11,6 +10,9 @@ import org.junit.Test
 
 /**
  * 用例 20：不支持 HDR 显示设备的降级状态判断。
+ *
+ * Display.HDR_TYPE_* 常量值（android.view.Display）：
+ * HDR_TYPE_DOLBY_VISION = 1, HDR_TYPE_HDR10 = 2, HDR_TYPE_HLG = 3, HDR_TYPE_HDR10_PLUS = 4
  */
 class HdrSupportTest {
 
@@ -26,23 +28,16 @@ class HdrSupportTest {
 
     @Test
     fun hlgCapable_isHdr() {
-        assertTrue(HdrSupport.isHdrCapable(intArrayOf(Display.HDR_TYPE_HLG)))
+        assertTrue(HdrSupport.isHdrCapable(intArrayOf(3)))
     }
 
     @Test
     fun hdr10Capable_isHdr() {
-        assertTrue(HdrSupport.isHdrCapable(intArrayOf(Display.HDR_TYPE_HDR10)))
+        assertTrue(HdrSupport.isHdrCapable(intArrayOf(2)))
     }
 
     @Test
     fun mixedTypes_isHdr() {
-        assertTrue(
-            HdrSupport.isHdrCapable(
-                intArrayOf(
-                    Display.HDR_TYPE_DOLBY_VISION,
-                    Display.HDR_TYPE_HDR10_PLUS,
-                )
-            )
-        )
+        assertTrue(HdrSupport.isHdrCapable(intArrayOf(1, 4)))
     }
 }

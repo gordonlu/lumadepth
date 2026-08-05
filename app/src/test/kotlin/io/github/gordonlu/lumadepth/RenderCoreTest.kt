@@ -339,9 +339,9 @@ class RenderCoreTest {
             val r = (v shr 16) and 0xFF
             val g = (v shr 8) and 0xFF
             val b = v and 0xFF
-            assertEquals(128, r, 1)
-            assertEquals(128, g, 1)
-            assertEquals(128, b, 1)
+            assertEquals(128f, r.toFloat(), 1f)
+            assertEquals(128f, g.toFloat(), 1f)
+            assertEquals(128f, b.toFloat(), 1f)
         }
     }
 

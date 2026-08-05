@@ -5,6 +5,7 @@ package io.github.gordonlu.lumadepth
 
 import io.github.gordonlu.lumadepth.image.tonemap.InverseTonemap
 import io.github.gordonlu.lumadepth.image.tonemap.ToneMapParameters
+import kotlin.math.pow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,7 +22,7 @@ class InverseTonemapTest {
         saturationProtection = 0.5f,
         localEnhancement = 0f,
         minBoost = 1f,
-        maxBoost = kotlin.math.pow(2.0, 1.1).toFloat(),
+        maxBoost = 2.0.pow(1.1).toFloat(),
     )
 
     @Test
@@ -52,7 +53,7 @@ class InverseTonemapTest {
         for (y in 0..100) {
             val g = InverseTonemap.baseGainFor(y / 100f, params)
             assertTrue(g >= 1f)
-            assertTrue(g <= kotlin.math.pow(2.0, 1.1).toFloat() + 1e-3f)
+            assertTrue(g <= 2.0.pow(1.1).toFloat() + 1e-3f)
             assertTrue(g.isFinite())
         }
     }

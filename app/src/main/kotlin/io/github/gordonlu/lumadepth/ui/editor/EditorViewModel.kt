@@ -177,15 +177,22 @@ class EditorViewModel(
     }
 
     companion object {
+        /** 通过 Application 容器提供 pipeline 的 ViewModel 工厂。 */
         @androidx.compose.runtime.Composable
-        fun factory() = androidx.lifecycle.viewmodel.compose.viewModel(
-            factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-                @Suppress("UNCHECKED_CAST")
-                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as LumaDepthApplication
-                    return EditorViewModel(app, app.container.pipeline) as T
-                }
-            },
-        )
+        fun factory(): EditorViewModel {
+            val app = androidx.compose.ui.platform.LocalContext.current
+                .applicationContext as LumaDepthApplication
+            return androidx.lifecycle.viewmodel.compose.viewModel(
+                factory = EditorViewModelFactory(app),
+            )
+        }
+    }
+}
+
+private class EditorViewModelFactory(private val app: LumaDepthApplication) :
+    androidx.lifecycle.ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        return EditorViewModel(app, app.container.pipeline) as T
     }
 }

@@ -5,6 +5,7 @@ package io.github.gordonlu.lumadepth.image.decode
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.ColorSpace
 import android.graphics.ImageDecoder
 import android.net.Uri
@@ -72,7 +73,12 @@ class BitmapDecoder(private val context: Context) {
         val srgb = ColorSpace.get(ColorSpace.Named.SRGB)
         val cs = bitmap.colorSpace ?: return bitmap
         if (cs == srgb || cs.model != ColorSpace.Model.RGB) return bitmap
-        return bitmap.convert(srgb)
+        // Canvas 绘制时自动把源位图色彩转换到目标 sRGB 色彩空间。
+        val out = Bitmap.createBitmap(
+            bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888, false, srgb
+        )
+        Canvas(out).drawBitmap(bitmap, 0f, 0f, null)
+        return out
     }
 
     companion object {

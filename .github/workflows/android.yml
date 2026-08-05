@@ -29,6 +29,14 @@ jobs:
       - name: Install Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: License check
+        run: |
+          grep -q "PolyForm-Noncommercial-1.0.0" LICENSE && echo "LICENSE: PolyForm Noncommercial 1.0.0 OK"
+          grep -q "source-available for noncommercial use" README.md && echo "README: source-available notice OK"
+          grep -q "PolyForm-Noncommercial-1.0.0" COMMERCIAL_LICENSE.md && echo "COMMERCIAL_LICENSE: OK"
+          grep -q "not currently accepted" CONTRIBUTING.md && echo "CONTRIBUTING: contributions policy OK"
+          grep -rq "SPDX-License-Identifier" app/src/main/kotlin && echo "SPDX headers: OK"
+
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
 

@@ -1,6 +1,14 @@
 # THIRD PARTY NOTICES
 
-LumaDepth 依赖以下第三方组件。所有依赖均允许商业使用与闭源产品使用。
+## LumaDepth 自有代码
+
+LumaDepth 自行编写的 Kotlin、图像算法、UI 与业务代码的版权归 Gordon Lu 所有
+（`Copyright (c) 2026 Gordon Lu`），适用 **PolyForm Noncommercial License 1.0.0**
+（SPDX: `PolyForm-Noncommercial-1.0.0`，见 [LICENSE](LICENSE)）。
+
+第三方组件仍然适用各自原有许可证，不受 PolyForm Noncommercial 约束。
+
+## 第三方组件清单
 
 | 项目 | 来源 | 版本 | 许可证 | 用途 | 是否修改源码 |
 | --- | --- | --- | --- | --- | --- |
@@ -18,16 +26,18 @@ LumaDepth 依赖以下第三方组件。所有依赖均允许商业使用与闭�
 
 ## 平台级说明
 
-LumaDepth 使用 Android 14（API 34）官方 `android.graphics.Gainmap`、`Bitmap.setGainmap()` 与
-`Bitmap.compress()` 完成 Ultra HDR JPEG 的编码与解码。Android 平台内部的 Ultra HDR 编解码
-由 Google 的 [libultrahdr](https://github.com/google/libultrahdr)（Apache-2.0 / MIT 双许可）实现，
-它随 Android 系统分发，LumaDepth 不直接依赖、不捆绑、不修改 libultrahdr。
+LumaDepth 使用 Android 14（API 34）官方 `android.graphics.Gainmap`、
+`Bitmap.setGainmap()` 与 `Bitmap.compress()` 完成 Ultra HDR JPEG 的编码与解码。
+Android 平台内部的 Ultra HDR 编解码由 Google 的
+[libultrahdr](https://github.com/google/libultrahdr)（Apache-2.0 / MIT 双许可）实现，
+它随 Android 系统分发。LumaDepth 不直接依赖、不捆绑、不修改 libultrahdr；
+如未来直接集成 libultrahdr，将保留其原始许可证、版权及 NOTICE 声明。
 
 ## 参考项目
 
-[andAicaroid](https://github.com/takusan23/andAicaroid)（Apache-2.0）仅作为 Ultra HDR 技术路线的
-研究参考（JNI 桥接思路、元数据概念）。LumaDepth 未复制其任何代码，未使用其 `libaicaroid` 依赖，
-未采用其包名、界面或项目结构。
+[andAicaroid](https://github.com/takusan23/andAicaroid)（Apache-2.0）仅作为 Ultra HDR
+技术路线的研究参考（JNI 桥接思路、元数据概念）。LumaDepth 未复制其任何代码，
+未使用其 `libaicaroid` 依赖，未采用其包名、界面或项目结构。
 
 ## 未使用的组件
 
@@ -37,5 +47,5 @@ LumaDepth 使用 Android 14（API 34）官方 `android.graphics.Gainmap`、`Bitm
 
 ## 版权与许可保留
 
-Android、AndroidX、Jetpack Compose 的版权归 Google LLC 所有；Kotlin 版权归 JetBrains s.r.o. 所有。
-以上组件各自的许可证全文可在其官方仓库获取。
+Android、AndroidX、Jetpack Compose 的版权归 Google LLC 所有；Kotlin 版权归
+JetBrains s.r.o. 所有。以上组件各自的许可证全文可在其官方仓库获取。

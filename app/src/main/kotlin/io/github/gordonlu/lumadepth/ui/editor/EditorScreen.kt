@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Gordon Lu
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 package io.github.gordonlu.lumadepth.ui.editor
 
 import android.graphics.Bitmap
@@ -116,11 +119,11 @@ fun EditorScreen(uri: android.net.Uri, onBack: () -> Unit) {
                         )
                         Label(
                             text = stringResource(R.string.original),
-                            alignment = Alignment.TopStart,
+                            modifier = Modifier.align(Alignment.TopStart),
                         )
                         Label(
                             text = stringResource(R.string.hdr_preview),
-                            alignment = Alignment.TopEnd,
+                            modifier = Modifier.align(Alignment.TopEnd),
                         )
                     }
                 }
@@ -190,23 +193,18 @@ fun EditorScreen(uri: android.net.Uri, onBack: () -> Unit) {
 }
 
 @Composable
-private fun Label(text: String, alignment: Alignment) {
-    androidx.compose.foundation.layout.Box(
-        modifier = Modifier
-            .padding(10.dp)
-            .align(alignment)
+private fun Label(text: String, modifier: Modifier = Modifier) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+        modifier = modifier.padding(10.dp),
     ) {
-        Surface(
-            shape = RoundedCornerShape(6.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-            )
-        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+        )
     }
 }
 

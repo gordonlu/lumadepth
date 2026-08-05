@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Gordon Lu
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 package io.github.gordonlu.lumadepth.image
 
 import android.content.Context
@@ -124,14 +127,16 @@ class UltraHdrPipeline(
                             )
                         }
                     }
-                    if (!encoded) throw LumaDepthException("Ultra HDR 编码失败")
+                    if (!encoded) throw LumaDepthException(context.getString(R.string.error_encode_failed))
 
                     onStage(Stage.VERIFYING)
                     val report = withContext(Dispatchers.IO) {
                         tempFile.inputStream().use { UltraHdrVerifier.verify(it, tempFile.length()) }
                     }
                     if (!report.ok) {
-                        throw LumaDepthException("输出文件验证失败：${report.details}")
+                        throw LumaDepthException(
+                            context.getString(R.string.error_verify_failed, report.details)
+                        )
                     }
 
                     onStage(Stage.SAVING)
@@ -139,10 +144,14 @@ class UltraHdrPipeline(
                     // 对相册中的文件再次验证，确保保存过程没有损坏。
                     val savedReport = context.contentResolver.openInputStream(saved.uri)?.use {
                         UltraHdrVerifier.verify(it, saved.sizeBytes)
-                    } ?: throw LumaDepthException("输出文件验证失败：无法重新读取")
+                    } ?: throw LumaDepthException(
+                        context.getString(R.string.error_verify_failed, "无法重新读取")
+                    )
 
                     if (!savedReport.ok) {
-                        throw LumaDepthException("输出文件验证失败：${savedReport.details}")
+                        throw LumaDepthException(
+                            context.getString(R.string.error_verify_failed, savedReport.details)
+                        )
                     }
                     return ExportResult(
                         savedUri = saved.uri,

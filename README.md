@@ -6,7 +6,15 @@ LumaDepth 是一款完全离线的移动端计算摄影工具。首个功能是�
 **真正包含 Gain Map 的 Ultra HDR JPEG**——不是普通滤镜，而是标准的 HDR 图像格式。
 
 ![Android CI](https://github.com/gordonlu/lumadepth/actions/workflows/android.yml/badge.svg)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-lightgrey.svg)](LICENSE)
+
+> LumaDepth is source-available for noncommercial use under the
+> PolyForm Noncommercial License 1.0.0.
+>
+> Commercial use requires a separate license from the copyright holder.
+>
+> LumaDepth 公开源代码供个人学习、研究和非商业使用。
+> 未经版权所有者另行授权，不得用于商业产品、收费服务或其他营利活动。
 
 ## 当前首个功能：Ultra HDR
 
@@ -107,10 +115,19 @@ LumaDepth 的增强算法基于线性光计算增益比，输出即标准的 ISO
 
 ## 许可证
 
-LumaDepth 使用 **Apache License 2.0**（见 [LICENSE](LICENSE)），允许商业使用。
+LumaDepth 属于**源码可用（Source Available）**项目，不是 OSI 认证的开源软件。
+自有代码（Kotlin、图像算法、UI、业务代码）适用
+**PolyForm Noncommercial License 1.0.0**（SPDX: `PolyForm-Noncommercial-1.0.0`，
+见 [LICENSE](LICENSE)），版权 `Copyright (c) 2026 Gordon Lu`：
 
-第三方依赖及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
-所有依赖均允许商业与闭源使用。
+- 允许：查看和学习源码、个人非商业使用、非商业研究与实验、非商业修改与分发。
+- 禁止：销售、收费 App、广告/订阅/内购营利、集成到商业产品或服务、
+  代表营利性组织使用、提供收费构建/托管/转换服务、开发实质相同的商业产品。
+- 商业使用需另行获得版权所有者书面授权，见 [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md)。
+
+第三方组件（Android 平台 API、AndroidX、kotlinx-coroutines、Gradle、JUnit 等）
+仍适用各自原有许可证（详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)），
+第三方许可证允许商业集成，不影响 LumaDepth 自有代码的非商业许可范围。
 
 ## 当前限制
 

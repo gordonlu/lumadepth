@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Gordon Lu
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+
 package io.github.gordonlu.lumadepth.model
 
 /** 处理阶段，UI 据此显示明确的进度文字。 */

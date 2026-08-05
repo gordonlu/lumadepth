@@ -6,6 +6,7 @@ package io.github.gordonlu.lumadepth.image
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import io.github.gordonlu.lumadepth.R
 import io.github.gordonlu.lumadepth.image.analysis.Analysis
 import io.github.gordonlu.lumadepth.image.analysis.AnalysisResult
 import io.github.gordonlu.lumadepth.image.analysis.ImageAnalyzer

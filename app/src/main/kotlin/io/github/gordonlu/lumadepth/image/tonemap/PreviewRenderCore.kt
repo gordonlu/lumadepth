@@ -3,12 +3,19 @@
 
 package io.github.gordonlu.lumadepth.image.tonemap
 
+import io.github.gordonlu.lumadepth.image.analysis.HighlightClassifier
+import io.github.gordonlu.lumadepth.image.analysis.NoiseEstimation
+import io.github.gordonlu.lumadepth.image.filter.BoxFilter
+import io.github.gordonlu.lumadepth.image.filter.FastGuidedFilter
+import io.github.gordonlu.lumadepth.image.gainmap.GainMapRenderCore
 import kotlin.math.max
 import kotlin.math.pow
+import kotlin.math.sqrt
 
 /**
  * HDR 效果预览渲染核心（纯 JVM，ARGB_8888 IntArray ↔ IntArray）。
  * 模拟 HDR 增益在 SDR 屏幕上的效果：线性增益 → 柔和色域压缩 → 饱和度保护 → sRGB 重编码。
+ * 与 [GainMapRenderCore] 保持相同的白色保护/噪声抑制/局部增强逻辑。
  */
 object PreviewRenderCore {
 
@@ -42,29 +49,46 @@ object PreviewRenderCore {
                 else -> 0f
             }
         }
-        val blurY = boxBlur(yLinear, width, height, 1)
-        val blurY2 = boxBlurSquared(yLinear, width, height, 1)
-        val blurLogY = boxBlur(logY, width, height, 1)
+        val blurY = BoxFilter.blur(yLinear, width, height, 1)
+        val blurY2 = BoxFilter.blurSquared(yLinear, width, height, 1)
+        val variance = FloatArray(n)
+        for (i in 0 until n) {
+            var v = blurY2[i] - blurY[i] * blurY[i]
+            if (v < 0f) v = 0f
+            variance[i] = v
+        }
+        val highlightConfidence = HighlightClassifier.computeConfidence(clippedMask, variance, width, height)
+        val noiseMask = NoiseEstimation.estimateNoiseMask(yLinear, blurY)
+        val guidedLogY = if (p.localEnhancement > 0f) {
+            FastGuidedFilter.filter(
+                yLinear, logY, width, height,
+                GainMapRenderCore.GUIDED_RADIUS, GainMapRenderCore.GUIDED_EPS,
+            )
+        } else {
+            null
+        }
 
         val out = IntArray(n)
         for (i in 0 until n) {
-            val meanY = blurY[i]
-            val meanY2 = blurY2[i]
-            var variance = meanY2 - meanY * meanY
-            if (variance < 0f) variance = 0f
-            val std = kotlin.math.sqrt(variance)
+            val std = sqrt(variance[i])
             val texture = InverseTonemap.smoothstep(0.008f, 0.04f, std)
 
             val y = yLinear[i]
             var gain = InverseTonemap.baseGainFor(y, p)
+            val confidence = highlightConfidence[i]
+            val flatWhite = clippedMask[i] > 0.9f && texture < 0.3f
+            val protection = when {
+                flatWhite && p.whiteProtectionStrength > 0f && confidence < 0.2f -> 1f
+                else -> p.whiteProtectionStrength * (1f - 0.5f * confidence)
+            }
             val whiteMask = (1f - texture) * clippedMask[i]
-            val isFlatWhite = clippedMask[i] > 0.9f && texture < 0.3f
-            val protectionStrength =
-                if (isFlatWhite && p.whiteProtectionStrength > 0f) 1f else p.whiteProtectionStrength
-            gain = InverseTonemap.applyWhiteProtection(gain, whiteMask, protectionStrength)
-            if (p.localEnhancement > 0f) {
-                val k = p.localEnhancement * 0.15f * (1f - 0.7f * texture)
-                val localLogGain = (logY[i] - blurLogY[i]) * k
+            gain = InverseTonemap.applyWhiteProtection(gain, whiteMask, protection)
+            if (p.noiseSuppression > 0f) {
+                gain = 1f + (gain - 1f) * (1f - noiseMask[i] * p.noiseSuppression)
+            }
+            if (p.localEnhancement > 0f && guidedLogY != null) {
+                val k = p.localEnhancement * 0.15f * (1f - 0.7f * texture) * (1f - noiseMask[i])
+                val localLogGain = (logY[i] - guidedLogY[i]) * k
                 val localGain = 2f.pow(localLogGain.coerceIn(-0.3f, 0.3f))
                 gain = InverseTonemap.applyLocalEnhancement(gain, localGain)
             }
@@ -98,49 +122,5 @@ object PreviewRenderCore {
         if (c <= 1f) return c
         val t = (c - 1f) / 1.6f
         return 1f + (1f - 1f / (1f + t))
-    }
-
-    private fun boxBlur(src: FloatArray, width: Int, height: Int, radius: Int): FloatArray {
-        val n = src.size
-        val tmp = FloatArray(n)
-        val out = FloatArray(n)
-        for (y in 0 until height) {
-            val row = y * width
-            for (x in 0 until width) {
-                var sum = 0f
-                var count = 0
-                for (dx in -radius..radius) {
-                    val xx = x + dx
-                    if (xx in 0 until width) {
-                        sum += src[row + xx]
-                        count++
-                    }
-                }
-                tmp[row + x] = sum / count
-            }
-        }
-        for (y in 0 until height) {
-            val row = y * width
-            for (x in 0 until width) {
-                var sum = 0f
-                var count = 0
-                for (dy in -radius..radius) {
-                    val yy = y + dy
-                    if (yy in 0 until height) {
-                        sum += tmp[yy * width + x]
-                        count++
-                    }
-                }
-                out[row + x] = sum / count
-            }
-        }
-        return out
-    }
-
-    private fun boxBlurSquared(src: FloatArray, width: Int, height: Int, radius: Int): FloatArray {
-        val n = src.size
-        val sq = FloatArray(n)
-        for (i in 0 until n) sq[i] = src[i] * src[i]
-        return boxBlur(sq, width, height, radius)
     }
 }

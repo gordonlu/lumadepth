@@ -25,6 +25,8 @@ data class ToneMapParameters(
     val localEnhancement: Float,
     val minBoost: Float,
     val maxBoost: Float,
+    /** 噪声感知增益抑制强度 (0..1)：暗部噪点/JPEG 块放大抑制。 */
+    val noiseSuppression: Float = 0.4f,
 )
 
 object AutoParameters {
@@ -71,6 +73,13 @@ object AutoParameters {
         }
         // 自动模式下局部增强减半，保持"较弱效果"的特性。
         val localEnhancement = if (autoOptimize) local * 0.5f else local
+        // 噪声抑制：暗部占比越高越强（暗部噪点更易被增益放大）。
+        val darkFraction = analysis.blackFraction + analysis.shadowFraction
+        val noiseSuppression = if (autoOptimize) {
+            (0.30f + 0.40f * min(1f, darkFraction / 0.5f)).coerceIn(0.30f, 0.70f)
+        } else {
+            0.40f
+        }
         return ToneMapParameters(
             highlightStart = highlightStart,
             highlightEnd = highlightEnd,
@@ -82,6 +91,7 @@ object AutoParameters {
             localEnhancement = localEnhancement,
             minBoost = 1f,
             maxBoost = maxBoost,
+            noiseSuppression = noiseSuppression,
         )
     }
 

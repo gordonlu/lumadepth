@@ -12,6 +12,8 @@
     <string name="hdr_intensity">HDR intensity</string>
     <string name="local_enhancement">Local enhancement</string>
     <string name="auto_optimize">Auto optimize</string>
+    <string name="high_quality_label">High quality mode</string>
+    <string name="high_quality_desc">More natural detail enhancement (slower)</string>
     <string name="auto_optimize_desc">Adjust parameters based on the photo brightness</string>
     <string name="export">Export</string>
     <string name="cancel">Cancel</string>

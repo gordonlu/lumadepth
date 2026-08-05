@@ -13,6 +13,8 @@
     <string name="hdr_intensity">HDR 强度</string>
     <string name="local_enhancement">局部增强</string>
     <string name="auto_optimize">自动优化</string>
+    <string name="high_quality_label">高质量模式</string>
+    <string name="high_quality_desc">更自然的细节增强（处理更慢）</string>
     <string name="auto_optimize_desc">根据照片亮度自动调节参数</string>
     <string name="export">导出</string>
     <string name="cancel">取消</string>

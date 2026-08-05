@@ -40,6 +40,8 @@ data class EditorUiState(
     val intensity01: Float = EffectParameters.DEFAULT_INTENSITY,
     val local01: Float = EffectParameters.DEFAULT_LOCAL_ENHANCEMENT,
     val autoOptimize: Boolean = true,
+    /** 高质量模式：更自然的细节增强（处理更慢）。 */
+    val highQuality: Boolean = false,
     /** 选图后的解码/分析阶段（null = 无加载）。 */
     val previewStage: Stage? = null,
     /** 预览加载失败信息（可关闭）。 */
@@ -62,7 +64,7 @@ class EditorViewModel(
     private var hdrDisplayAvailable: Boolean = HdrSupport.isHdrDisplayAvailable(application)
 
     /** 预览参数流：防抖后触发预览渲染，拖动滑块不会产生并行任务。 */
-    private val previewParams = MutableStateFlow(Pair(0f, 0f))
+    private val previewParams = MutableStateFlow(Triple(0f, 0f, false))
     private var previewJob: Job? = null
 
     init {
@@ -126,6 +128,11 @@ class EditorViewModel(
         triggerPreview()
     }
 
+    fun setHighQuality(enabled: Boolean) {
+        _uiState.update { it.copy(highQuality = enabled) }
+        triggerPreview()
+    }
+
     fun export() {
         val current = _uiState.value
         val currentUri = uri ?: return
@@ -134,7 +141,9 @@ class EditorViewModel(
         if (current.sdrPreview == null) return
         val job = viewModelScope.launch {
             try {
-                val parameters = EffectParameters(current.intensity01, current.local01, current.autoOptimize)
+                val parameters = EffectParameters(
+                    current.intensity01, current.local01, current.autoOptimize, current.highQuality,
+                )
                 updateState(ExportEvent.Started(Stage.READING))
                 val result = pipeline.export(currentUri, parameters, current.analysis) { stage ->
                     updateState(ExportEvent.StageChanged(stage))
@@ -192,14 +201,16 @@ class EditorViewModel(
 
     private fun triggerPreview() {
         val state = _uiState.value
-        previewParams.value = Pair(state.intensity01, state.local01)
+        previewParams.value = Triple(state.intensity01, state.local01, state.highQuality)
     }
 
     private suspend fun renderPreview() {
         val state = _uiState.value
         val sdr = state.sdrPreview ?: return
         val analysis = state.analysis ?: return
-        val parameters = EffectParameters(state.intensity01, state.local01, state.autoOptimize)
+        val parameters = EffectParameters(
+            state.intensity01, state.local01, state.autoOptimize, state.highQuality,
+        )
         val hdr = pipeline.renderPreview(sdr, parameters, analysis)
         // 释放上一份预览图，避免累积。
         val old = _uiState.value.hdrPreview

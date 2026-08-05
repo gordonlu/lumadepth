@@ -148,10 +148,11 @@ fun EditorScreen(uri: android.net.Uri, onBack: () -> Unit) {
 
             // 参数区
             if (sdr != null) {
-                ParameterCard(state) { intensity, local, auto ->
+                ParameterCard(state) { intensity, local, auto, highQuality ->
                     viewModel.setHdrIntensity(intensity)
                     viewModel.setLocalEnhancement(local)
                     viewModel.setAutoOptimize(auto)
+                    viewModel.setHighQuality(highQuality)
                 }
             }
 
@@ -250,7 +251,7 @@ private fun HdrHint(hdrAvailable: Boolean) {
 @Composable
 private fun ParameterCard(
     state: EditorUiState,
-    onChange: (intensity: Float, local: Float, auto: Boolean) -> Unit,
+    onChange: (intensity: Float, local: Float, auto: Boolean, highQuality: Boolean) -> Unit,
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -265,7 +266,7 @@ private fun ParameterCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Slider(
                     value = state.intensity01,
-                    onValueChange = { onChange(it, state.local01, state.autoOptimize) },
+                    onValueChange = { onChange(it, state.local01, state.autoOptimize, state.highQuality) },
                     modifier = Modifier.weight(1f),
                 )
                 Text(
@@ -285,7 +286,7 @@ private fun ParameterCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Slider(
                     value = state.local01,
-                    onValueChange = { onChange(state.intensity01, it, state.autoOptimize) },
+                    onValueChange = { onChange(state.intensity01, it, state.autoOptimize, state.highQuality) },
                     modifier = Modifier.weight(1f),
                 )
                 Text(
@@ -315,7 +316,29 @@ private fun ParameterCard(
                 }
                 Switch(
                     checked = state.autoOptimize,
-                    onCheckedChange = { onChange(state.intensity01, state.local01, it) },
+                    onCheckedChange = { onChange(state.intensity01, state.local01, it, state.highQuality) },
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.high_quality_label),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = stringResource(R.string.high_quality_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.highQuality,
+                    onCheckedChange = { onChange(state.intensity01, state.local01, state.autoOptimize, it) },
                 )
             }
         }

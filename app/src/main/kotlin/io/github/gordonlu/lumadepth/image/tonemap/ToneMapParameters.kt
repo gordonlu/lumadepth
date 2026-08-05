@@ -33,6 +33,8 @@ data class ToneMapParameters(
     val detailGainEv: Float = 0f,
     /** 肤色保护强度 (0..1，弱约束)。 */
     val skinProtection: Float = 0f,
+    /** 高质量模式：细节增强使用边缘感知的保边滤波（更自然，处理更慢）。 */
+    val highQuality: Boolean = false,
 )
 
 object AutoParameters {
@@ -48,8 +50,8 @@ object AutoParameters {
     /** 区域尺度增益占全局 headroom 的比例。 */
     const val REGION_FACTOR = 0.25f
 
-    /** 细节尺度最大增益（EV），对应局部增强滑杆 100。 */
-    const val DETAIL_MAX_EV = 1.2f
+    /** 细节尺度最大增益（EV）硬上限：主要 HDR 增益由整体高光映射负责，细节只做轻微修正。 */
+    const val DETAIL_MAX_EV = 0.7f
 
     /**
      * 根据图像分析与用户参数生成 ToneMapParameters。
@@ -67,6 +69,7 @@ object AutoParameters {
         intensity01: Float,
         local01: Float,
         autoOptimize: Boolean,
+        highQuality: Boolean = false,
     ): ToneMapParameters {
         // NaN/Inf 等非法输入按 0 处理，保证输出总是有限值。
         val intensity = if (intensity01.isFinite()) intensity01.coerceIn(0f, 1f) else 0f
@@ -112,6 +115,7 @@ object AutoParameters {
             regionGainEv = regionGainEv,
             detailGainEv = detailGainEv,
             skinProtection = 0.35f,
+            highQuality = highQuality,
         )
     }
 

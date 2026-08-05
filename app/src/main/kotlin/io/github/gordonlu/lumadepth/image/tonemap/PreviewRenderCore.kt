@@ -3,21 +3,14 @@
 
 package io.github.gordonlu.lumadepth.image.tonemap
 
-import io.github.gordonlu.lumadepth.image.analysis.HighlightClassifier
-import io.github.gordonlu.lumadepth.image.analysis.NoiseEstimation
-import io.github.gordonlu.lumadepth.image.analysis.SkinProtection
-import io.github.gordonlu.lumadepth.image.filter.BoxFilter
-import io.github.gordonlu.lumadepth.image.filter.FastGuidedFilter
-import io.github.gordonlu.lumadepth.image.gainmap.GainMapRenderCore
+import io.github.gordonlu.lumadepth.image.gainmap.GainComputation
 import kotlin.math.ln
 import kotlin.math.max
-import kotlin.math.pow
-import kotlin.math.sqrt
 
 /**
  * HDR 效果预览渲染核心（纯 JVM，ARGB_8888 IntArray ↔ IntArray）。
  * 模拟 HDR 增益在 SDR 屏幕上的效果。
- * 与 [GainMapRenderCore] 保持相同的多尺度/白色保护/噪声抑制/肤色保护逻辑，
+ * 增益场与导出完全一致（[GainComputation]），
  * 输出阶段先做色度压缩（保持色相）再做亮度肩部（控制溢出）。
  */
 object PreviewRenderCore {
@@ -28,94 +21,13 @@ object PreviewRenderCore {
      */
     fun renderPixels(pixels: IntArray, width: Int, height: Int, p: ToneMapParameters): IntArray {
         val n = pixels.size
-        val yLinear = FloatArray(n)
-        val rLinear = FloatArray(n)
-        val gLinear = FloatArray(n)
-        val bLinear = FloatArray(n)
-        val logY = FloatArray(n)
-        val clippedMask = FloatArray(n)
-        for (i in 0 until n) {
-            val argb = pixels[i]
-            val r = Srgb.toLinear(((argb shr 16) and 0xFF) / 255f)
-            val g = Srgb.toLinear(((argb shr 8) and 0xFF) / 255f)
-            val b = Srgb.toLinear((argb and 0xFF) / 255f)
-            rLinear[i] = r
-            gLinear[i] = g
-            bLinear[i] = b
-            val y = Srgb.luminanceLinear(r, g, b)
-            yLinear[i] = y
-            logY[i] = ln(y + 1e-4f)
-            val minCh = minOf(r, g, b)
-            clippedMask[i] = when {
-                minCh >= 0.92f -> 1f
-                minCh >= 0.85f -> (minCh - 0.85f) / 0.07f
-                else -> 0f
-            }
-        }
-        val blurY = BoxFilter.blur(yLinear, width, height, 1)
-        val blurY2 = BoxFilter.blurSquared(yLinear, width, height, 1)
-        val variance = FloatArray(n)
-        for (i in 0 until n) {
-            var v = blurY2[i] - blurY[i] * blurY[i]
-            if (v < 0f) v = 0f
-            variance[i] = v
-        }
-        val highlightConfidence = HighlightClassifier.computeConfidence(clippedMask, variance, width, height)
-        val noiseMask = NoiseEstimation.estimateNoiseMask(yLinear, blurY)
-        val skinConfidence = SkinProtection.computeConfidence(rLinear, gLinear, bLinear)
-        val multiScale = p.regionGainEv > 0f || p.detailGainEv > 0f
-        val regionLogY = if (multiScale) {
-            FastGuidedFilter.filter(
-                yLinear, logY, width, height,
-                GainMapRenderCore.REGION_RADIUS, GainMapRenderCore.REGION_EPS,
-            )
-        } else {
-            null
-        }
-
-        val maxLogGain = if (p.maxBoost > 1f) ln(p.maxBoost) / ln(2f) else 0f
+        val gain = GainComputation.computeGain(pixels, width, height, p)
         val out = IntArray(n)
         for (i in 0 until n) {
-            val std = sqrt(variance[i])
-            val texture = InverseTonemap.smoothstep(0.008f, 0.04f, std)
-
-            val y = yLinear[i]
-            // 阴影保护：暗部增益趋近 1.0（shadowAllow 在暗部为 0）
-            val shadowAllow = InverseTonemap.smoothstep(p.shadowStart, p.shadowEnd, y)
-            val highlightMask = InverseTonemap.smoothstep(p.highlightStart, p.highlightEnd, y)
-            var logGain = p.maxGainEv * highlightMask * shadowAllow
-            if (multiScale && regionLogY != null) {
-                val regionMask = InverseTonemap.smoothstep(
-                    GainMapRenderCore.REGION_LOG_START, GainMapRenderCore.REGION_LOG_END, regionLogY[i],
-                )
-                logGain += p.regionGainEv * regionMask * shadowAllow
-                val detailLevel = logY[i] - regionLogY[i]
-                val detailMask = InverseTonemap.smoothstep(
-                    GainMapRenderCore.DETAIL_START, GainMapRenderCore.DETAIL_END, detailLevel,
-                ) * (1f - noiseMask[i])
-                logGain += p.detailGainEv * detailMask
-            }
-            logGain = logGain.coerceIn(0f, maxLogGain)
-            var gain = 2f.pow(logGain)
-
-            val confidence = highlightConfidence[i]
-            val flatWhite = clippedMask[i] > 0.9f && texture < 0.3f
-            val protection = when {
-                flatWhite && p.whiteProtectionStrength > 0f && confidence < 0.2f -> 1f
-                else -> p.whiteProtectionStrength * (1f - 0.5f * confidence)
-            }
-            val whiteMask = (1f - texture) * clippedMask[i]
-            gain = InverseTonemap.applyWhiteProtection(gain, whiteMask, protection)
-            if (p.noiseSuppression > 0f) {
-                gain = 1f + (gain - 1f) * (1f - noiseMask[i] * p.noiseSuppression)
-            }
-            if (p.skinProtection > 0f) {
-                gain = SkinProtection.applyProtection(gain, skinConfidence[i], p.skinProtection)
-            }
-
-            val r = rLinear[i] * gain
-            val g = gLinear[i] * gain
-            val b = bLinear[i] * gain
+            val argb = pixels[i]
+            val r = Srgb.toLinear(((argb shr 16) and 0xFF) / 255f) * gain[i]
+            val g = Srgb.toLinear(((argb shr 8) and 0xFF) / 255f) * gain[i]
+            val b = Srgb.toLinear((argb and 0xFF) / 255f) * gain[i]
             val maxC = max(max(r, g), b)
             val overshoot = (maxC - 1f).coerceAtLeast(0f)
             if (overshoot > 0f) {
@@ -128,10 +40,7 @@ object PreviewRenderCore {
                 val go = luma + (g - luma) * satScale
                 val bo = luma + (b - luma) * satScale
                 // 亮度肩部（后）：柔和压缩溢出
-                val rout = shoulder(ro)
-                val gout = shoulder(go)
-                val bout = shoulder(bo)
-                out[i] = encodePixel(rout, gout, bout)
+                out[i] = encodePixel(shoulder(ro), shoulder(go), shoulder(bo))
             } else {
                 // 无溢出：保持原始（强度为 0 时与原始一致）
                 out[i] = encodePixel(r, g, b)

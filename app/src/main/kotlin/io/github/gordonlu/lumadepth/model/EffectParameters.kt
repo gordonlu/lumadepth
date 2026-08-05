@@ -10,6 +10,8 @@ data class EffectParameters(
     val hdrIntensity01: Float,
     val localEnhancement01: Float,
     val autoOptimize: Boolean,
+    /** 高质量模式：更自然的细节增强（处理更慢）。 */
+    val highQuality: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_INTENSITY = 0.5f

@@ -74,6 +74,7 @@ class UltraHdrPipeline(
                 parameters.hdrIntensity01,
                 parameters.localEnhancement01,
                 parameters.autoOptimize,
+                parameters.highQuality,
             )
             previewRenderer.render(sdr, params)
         }
@@ -112,6 +113,7 @@ class UltraHdrPipeline(
                 parameters.hdrIntensity01,
                 parameters.localEnhancement01,
                 parameters.autoOptimize,
+                parameters.highQuality,
             )
 
             stage(Stage.GAIN_MAP)

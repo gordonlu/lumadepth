@@ -11,7 +11,7 @@ permissions:
 jobs:
   instrumented:
     name: Ultra HDR encode/verify on emulator
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,6 +27,11 @@ jobs:
 
       - name: Install Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Ensure KVM access
+        run: |
+          sudo chmod 666 /dev/kvm || true
+          ls -la /dev/kvm || true
 
       - name: Run instrumented tests on API 34 emulator
         uses: reactivecircus/android-emulator-runner@v2

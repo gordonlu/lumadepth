@@ -3,6 +3,7 @@
 
 package io.github.gordonlu.lumadepth.ui.editor
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -133,38 +136,79 @@ fun EditorScreen(uri: android.net.Uri, onBack: () -> Unit) {
                 }
             }
 
-            // 预览
+            // 预览：加载中 → 占位；原图就绪但 HDR 预览未生成 → 原图 + 生成提示；两者就绪 → 对比
             val sdr = state.sdrPreview
             val hdr = state.hdrPreview
-            if (state.previewStage == null && sdr != null && hdr != null) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                ) {
-                    Box {
-                        CompareSlider(
-                            original = sdr,
-                            enhanced = hdr,
+            when {
+                state.previewStage != null -> Unit // 上方已显示加载占位
+                sdr != null && hdr != null -> {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                    ) {
+                        Box {
+                            CompareSlider(
+                                original = sdr,
+                                enhanced = hdr,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(300.dp),
+                            )
+                            Label(
+                                text = stringResource(R.string.original),
+                                modifier = Modifier.align(Alignment.TopStart),
+                            )
+                            Label(
+                                text = stringResource(R.string.hdr_preview),
+                                modifier = Modifier.align(Alignment.TopEnd),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.compare_label),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                sdr != null -> {
+                    // 原图已显示、HDR 预览渲染中：显示原图 + 生成提示
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp),
+                    ) {
+                        Image(
+                            bitmap = sdr.asImageBitmap(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(300.dp),
-                        )
-                        Label(
-                            text = stringResource(R.string.original),
-                            modifier = Modifier.align(Alignment.TopStart),
-                        )
-                        Label(
-                            text = stringResource(R.string.hdr_preview),
-                            modifier = Modifier.align(Alignment.TopEnd),
-                        )
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 10.dp),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.generating_preview),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.compare_label),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
 
             Spacer(Modifier.height(16.dp))

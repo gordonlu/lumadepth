@@ -27,6 +27,7 @@
     <string name="auto_optimize_desc">Auto-adjusts internal parameters (highlight range, protection) from photo brightness; sliders below are manual and apply on top</string>
     <string name="export">Export</string>
     <string name="cancel">Cancel</string>
+    <string name="generating_preview">Generating HDR preview…</string>
     <string name="compare_label">Drag to compare</string>
     <string name="original">Original</string>
     <string name="hdr_preview">HDR preview</string>

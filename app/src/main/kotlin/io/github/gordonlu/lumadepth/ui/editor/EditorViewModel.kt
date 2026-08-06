@@ -43,6 +43,8 @@ data class EditorUiState(
     val highQuality: Boolean = false,
     /** 选图后的解码/分析阶段（null = 无加载）。 */
     val previewStage: Stage? = null,
+    /** 输入照片是否已包含 Gain Map（Ultra HDR）。 */
+    val isInputHdr: Boolean = false,
     /** 预览加载失败信息（可关闭）。 */
     val previewError: String? = null,
     /** 导出任务状态（状态机，单值驱动）。 */
@@ -89,12 +91,14 @@ class EditorViewModel(
             }
             try {
                 val sdr = pipeline.decodePreview(uri)
-                _uiState.update { it.copy(previewStage = Stage.ANALYZING) }
+                // 解码完成先显示原图，分析在后台继续，缩短等待感知。
+                _uiState.update {
+                    it.copy(previewStage = Stage.ANALYZING, sdrPreview = sdr, isInputHdr = sdr.hasGainmap())
+                }
                 val analysis = pipeline.analyze(uri) {}
                 _uiState.update {
                     it.copy(
                         previewStage = null,
-                        sdrPreview = sdr,
                         analysis = analysis,
                     )
                 }

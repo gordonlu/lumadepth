@@ -21,6 +21,8 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            // 测试发版使用调试签名（正式分发前需替换为正式签名）。
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

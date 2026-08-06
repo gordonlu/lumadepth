@@ -24,7 +24,7 @@
     <string name="high_quality_desc">More natural detail enhancement (slower)</string>
     <string name="input_is_hdr_title">Photo already contains HDR</string>
     <string name="input_is_hdr_desc">This photo is already Ultra HDR. Conversion rebuilds HDR from its standard version; the original HDR data will not be preserved. You can still export, or choose a normal photo for best results.</string>
-    <string name="auto_optimize_desc">Auto-adjusts internal parameters (highlight range, protection) from photo brightness; sliders below are manual and apply on top</string>
+    <string name="auto_optimize_desc">Auto-adjusts internal parameters (highlight range, protection) from photo brightness; sliders above are manual and apply on top</string>
     <string name="export">Export</string>
     <string name="cancel">Cancel</string>
     <string name="generating_preview">Generating HDR preview…</string>

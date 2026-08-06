@@ -3,6 +3,13 @@
     <string name="app_name">LumaDepth</string>
     <string name="app_subtitle">Realistic light and depth for your photos</string>
     <string name="app_description">A fully offline computational photography tool. Convert ordinary SDR photos into true Ultra HDR JPEGs with a real Gain Map.</string>
+    <string name="detect_hdr">Detect HDR photos</string>
+    <string name="detect_hdr_desc">Pick multiple photos to check which contain HDR</string>
+    <string name="detecting">Detecting…</string>
+    <string name="detect_result_title">Detection results</string>
+    <string name="detect_is_hdr">✓ HDR (brighter in HDR-capable viewers)</string>
+    <string name="detect_not_hdr">Standard photo (no HDR)</string>
+    <string name="detect_done">Done</string>
     <string name="pick_photo">Pick a photo</string>
     <string name="offline_note">Fully offline · photos are never uploaded</string>
     <string name="version_label">Version %1$s</string>

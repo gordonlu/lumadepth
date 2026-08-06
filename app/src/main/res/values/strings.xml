@@ -3,6 +3,13 @@
     <string name="app_name">LumaDepth</string>
     <string name="app_subtitle">让照片拥有更真实的光与深度</string>
     <string name="app_description">一款完全离线的计算摄影工具。将普通 SDR 照片转换为真正包含 Gain Map 的 Ultra HDR JPEG。</string>
+    <string name="detect_hdr">识别 HDR 照片</string>
+    <string name="detect_hdr_desc">批量选择照片，检测哪些包含 HDR 信息（支持多选）</string>
+    <string name="detecting">正在检测…</string>
+    <string name="detect_result_title">检测结果</string>
+    <string name="detect_is_hdr">✓ HDR（在支持 HDR 的查看器中打开会更亮）</string>
+    <string name="detect_not_hdr">普通照片（无 HDR 信息）</string>
+    <string name="detect_done">完成</string>
     <string name="pick_photo">选择照片</string>
     <string name="offline_note">完全离线 · 照片不会上传</string>
     <string name="version_label">版本 %1$s</string>

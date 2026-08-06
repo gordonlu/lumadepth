@@ -78,9 +78,20 @@ class EditorViewModel(
     }
 
     fun setUri(uri: Uri) {
-        // 更换照片时取消旧任务并释放旧图。
+        // 更换照片时取消旧任务并释放旧图（先清状态，延迟回收，避免与绘制竞争）。
         exportJob?.cancel()
-        releasePreviewBitmaps()
+        val oldSdr = _uiState.value.sdrPreview
+        val oldHdr = _uiState.value.hdrPreview
+        _uiState.update {
+            it.copy(sdrPreview = null, hdrPreview = null, analysis = null)
+        }
+        if (oldSdr != null || oldHdr != null) {
+            viewModelScope.launch {
+                kotlinx.coroutines.delay(300)
+                oldSdr?.recycle()
+                oldHdr?.recycle()
+            }
+        }
         this.uri = uri
         viewModelScope.launch {
             _uiState.update {
@@ -102,6 +113,10 @@ class EditorViewModel(
                 throw e
             } catch (e: LumaDepthException) {
                 _uiState.update { it.copy(previewStage = null, previewError = e.userMessage) }
+            } catch (e: OutOfMemoryError) {
+                _uiState.update {
+                    it.copy(previewStage = null, previewError = appString(R.string.error_insufficient_memory))
+                }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -213,10 +228,9 @@ class EditorViewModel(
         )
         try {
             val hdr = pipeline.renderPreview(sdr, parameters, analysis)
-            // 释放上一份预览图，避免累积。
-            val old = _uiState.value.hdrPreview
+            // 旧预览交由 GC 回收（主动回收可能与 Compose 绘制竞争导致崩溃；
+            // 预览图约 2MB/张，滑动期间最多累积 2~3 张，可接受）。
             _uiState.update { it.copy(hdrPreview = hdr) }
-            if (old !== hdr) old?.recycle()
         } catch (e: OutOfMemoryError) {
             // 预览失败不崩溃：提示并保持原图显示。
             _uiState.update {
@@ -225,20 +239,15 @@ class EditorViewModel(
         }
     }
 
-    private fun releasePreviewBitmaps() {
-        val state = _uiState.value
-        state.sdrPreview?.recycle()
-        state.hdrPreview?.recycle()
-        _uiState.update { it.copy(sdrPreview = null, hdrPreview = null, analysis = null) }
-    }
-
     private fun appString(resId: Int, vararg args: Any): String =
         getApplication<Application>().getString(resId, *args)
 
     override fun onCleared() {
         previewJob?.cancel()
         exportJob?.cancel()
-        releasePreviewBitmaps()
+        val state = _uiState.value
+        state.sdrPreview?.recycle()
+        state.hdrPreview?.recycle()
         super.onCleared()
     }
 

@@ -3,16 +3,21 @@
 
 package io.github.gordonlu.lumadepth.ui.home
 
+import android.graphics.ImageDecoder
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -31,11 +36,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -46,6 +54,8 @@ import androidx.compose.ui.unit.sp
 import io.github.gordonlu.lumadepth.BuildConfig
 import io.github.gordonlu.lumadepth.R
 import io.github.gordonlu.lumadepth.util.HdrDetector
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 @Composable
@@ -237,15 +247,11 @@ private fun HdrDetectSection() {
             title = { Text(stringResource(R.string.detect_result_title)) },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    list.forEach { (_, isHdr) ->
-                        Text(
-                            text = stringResource(
-                                if (isHdr) R.string.detect_is_hdr else R.string.detect_not_hdr
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (isHdr) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 4.dp),
+                    list.forEachIndexed { index, (uri, isHdr) ->
+                        DetectResultRow(
+                            uri = uri,
+                            index = index,
+                            isHdr = isHdr,
                         )
                     }
                 }
@@ -257,4 +263,78 @@ private fun HdrDetectSection() {
             },
         )
     }
+}
+
+@Composable
+private fun DetectResultRow(uri: android.net.Uri, index: Int, isHdr: Boolean) {
+    val context = LocalContext.current
+    val thumbnail by produceState<ImageBitmap?>(null, uri) {
+        value = withContext(Dispatchers.IO) {
+            try {
+                val source = ImageDecoder.createSource(context.contentResolver, uri)
+                val bmp = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                    decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                    val scale = minOf(1f, 96f / maxOf(info.size.width, info.size.height))
+                    decoder.setTargetSize(
+                        (info.size.width * scale).toInt().coerceAtLeast(1),
+                        (info.size.height * scale).toInt().coerceAtLeast(1),
+                    )
+                }
+                bmp.asImageBitmap()
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+    val fileName = remember(uri) { displayName(context, uri) }
+
+    Row(
+        modifier = Modifier.padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.size(48.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                thumbnail?.let {
+                    Image(bitmap = it, contentDescription = null, modifier = Modifier.size(48.dp))
+                } ?: Text(
+                    text = "…",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = fileName,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(
+                    if (isHdr) R.string.detect_is_hdr else R.string.detect_not_hdr
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isHdr) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+private fun displayName(context: android.content.Context, uri: android.net.Uri): String {
+    runCatching {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { c ->
+                if (c.moveToFirst()) {
+                    val name = c.getString(0)
+                    if (!name.isNullOrBlank()) return name
+                }
+            }
+    }
+    return "照片 ${uri.lastPathSegment?.substringAfterLast('/') ?: ""}"
 }

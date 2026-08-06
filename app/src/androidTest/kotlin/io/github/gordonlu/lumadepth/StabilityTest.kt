@@ -189,7 +189,7 @@ class StabilityTest {
      */
     @Test
     fun hdrSupport_withRealDisplay_noThrow() {
-        val dm = context.getSystemService(android.view.DisplayManager::class.java)
+        val dm = context.getSystemService(Context.DISPLAY_SERVICE) as? android.hardware.display.DisplayManager
         assertNotNull(dm)
         val display = dm!!.getDisplay(android.view.Display.DEFAULT_DISPLAY)
         val ok = io.github.gordonlu.lumadepth.util.HdrSupport.isHdrDisplayAvailable(display)

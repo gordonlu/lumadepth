@@ -247,6 +247,12 @@ private fun HdrDetectSection() {
             title = { Text(stringResource(R.string.detect_result_title)) },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        text = stringResource(R.string.detect_hdr_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
                     list.forEachIndexed { index, (uri, isHdr) ->
                         DetectResultRow(
                             uri = uri,

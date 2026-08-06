@@ -7,6 +7,8 @@
     <string name="detect_hdr_desc">Pick multiple photos to check which contain HDR</string>
     <string name="detecting">Detecting…</string>
     <string name="detect_result_title">Detection results</string>
+    <string name="detect_is_hdr">✓ HDR</string>
+    <string name="detect_hdr_note">HDR photos appear brighter in HDR-capable viewers</string>
     <string name="detect_is_hdr">✓ HDR (brighter in HDR-capable viewers)</string>
     <string name="detect_not_hdr">Standard photo (no HDR)</string>
     <string name="detect_done">Done</string>

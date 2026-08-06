@@ -7,6 +7,8 @@
     <string name="detect_hdr_desc">批量选择照片，检测哪些包含 HDR 信息（支持多选）</string>
     <string name="detecting">正在检测…</string>
     <string name="detect_result_title">检测结果</string>
+    <string name="detect_is_hdr">✓ HDR</string>
+    <string name="detect_hdr_note">HDR 照片在支持 HDR 的查看器中打开会更亮</string>
     <string name="detect_is_hdr">✓ HDR（在支持 HDR 的查看器中打开会更亮）</string>
     <string name="detect_not_hdr">普通照片（无 HDR 信息）</string>
     <string name="detect_done">完成</string>

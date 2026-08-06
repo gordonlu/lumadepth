@@ -65,7 +65,7 @@ fun HomeScreen(onPhotoPicked: (Uri) -> Unit) {
     ) { uri ->
         if (uri != null) onPhotoPicked(uri)
     }
-    val appIcon = painterResource(R.drawable.ic_launcher_foreground)
+    val appIcon = painterResource(R.drawable.ic_launcher_background)
 
     Column(
         modifier = Modifier

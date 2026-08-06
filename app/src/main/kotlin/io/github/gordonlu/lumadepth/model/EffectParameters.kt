@@ -14,8 +14,8 @@ data class EffectParameters(
     val highQuality: Boolean = false,
 ) {
     companion object {
-        const val DEFAULT_INTENSITY = 0.5f
-        const val DEFAULT_LOCAL_ENHANCEMENT = 0.2f
+        const val DEFAULT_INTENSITY = 0.35f
+        const val DEFAULT_LOCAL_ENHANCEMENT = 0.1f
         fun defaults() = EffectParameters(
             hdrIntensity01 = DEFAULT_INTENSITY,
             localEnhancement01 = DEFAULT_LOCAL_ENHANCEMENT,

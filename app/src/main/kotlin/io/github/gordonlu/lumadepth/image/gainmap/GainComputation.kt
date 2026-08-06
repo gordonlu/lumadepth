@@ -118,6 +118,11 @@ object GainComputation {
             if (p.detailGainEv > 0f && detailConfidence != null) {
                 logGain += p.detailGainEv * detailConfidence[i]
             }
+            // 高光增益收敛：接近白色时整体增益递减，避免高光过曝
+            if (p.highlightRolloff > 0f) {
+                val rolloff = 1f - p.highlightRolloff * InverseTonemap.smoothstep(0.75f, 0.95f, y)
+                logGain *= rolloff
+            }
             logGain = logGain.coerceIn(0f, maxLogGain)
             var g = 2f.pow(logGain)
 

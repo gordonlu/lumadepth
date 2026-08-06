@@ -35,6 +35,8 @@ data class ToneMapParameters(
     val skinProtection: Float = 0f,
     /** 高质量模式：细节增强使用边缘感知的保边滤波（更自然，处理更慢）。 */
     val highQuality: Boolean = false,
+    /** 高光增益收敛：接近白色时增益递减（0=不启用，0.3=高光端增益降约 30%），避免过曝。 */
+    val highlightRolloff: Float = 0f,
 )
 
 object AutoParameters {
@@ -52,6 +54,9 @@ object AutoParameters {
 
     /** 细节尺度最大增益（EV）硬上限：主要 HDR 增益由整体高光映射负责，细节只做轻微修正。 */
     const val DETAIL_MAX_EV = 0.7f
+
+    /** 高光增益收敛强度（自动模式）：高光端增益递减比例。 */
+    const val HIGHLIGHT_ROLLOFF = 0.3f
 
     /**
      * 根据图像分析与用户参数生成 ToneMapParameters。
@@ -116,6 +121,7 @@ object AutoParameters {
             detailGainEv = detailGainEv,
             skinProtection = 0.35f,
             highQuality = highQuality,
+            highlightRolloff = HIGHLIGHT_ROLLOFF,
         )
     }
 

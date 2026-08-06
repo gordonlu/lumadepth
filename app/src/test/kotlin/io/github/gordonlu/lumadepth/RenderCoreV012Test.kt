@@ -197,4 +197,31 @@ class RenderCoreV012Test {
         val gmLamp = gainMapOf(lamp, w, h, autoParams(lamp))
         assertTrue(gainMapValue(gmLamp[48 * w + 48]) > 0.3f)
     }
+
+    /** 高光增益收敛：接近白色时增益递减（防过曝），中亮区不受影响。 */
+    @Test
+    fun highlightRolloff_reducesGainNearWhite() {
+        val w = 64
+        val h = 64
+        val bright = TestImages.solid(w, h, TestImages.argb(235, 235, 235)) // 线性约 0.9
+        val mid = TestImages.solid(w, h, TestImages.argb(190, 190, 190)) // 线性约 0.5
+        val base = ToneMapParameters(
+            highlightStart = 0.3f, highlightEnd = 0.9f, maxGainEv = 1.0f,
+            shadowStart = 0.02f, shadowEnd = 0.15f,
+            whiteProtectionStrength = 0f, saturationProtection = 0.5f,
+            localEnhancement = 0f, minBoost = 1f, maxBoost = 2f,
+        )
+        val pNoRoll = base
+        val pRoll = base.copy(highlightRolloff = 0.3f)
+        val gmNo = gainMapOf(bright, w, h, pNoRoll)
+        val gmRoll = gainMapOf(bright, w, h, pRoll)
+        val vNo = gainMapValue(gmNo[0])
+        val vRoll = gainMapValue(gmRoll[0])
+        assertTrue("高光端增益应被收敛 no=$vNo roll=$vRoll", vRoll < vNo)
+        // 中亮区不受 roll-off 影响
+        val gmMid = gainMapOf(mid, w, h, pRoll)
+        assertTrue(gainMapValue(gmMid[0]) > 0f)
+    }
 }
+
+    

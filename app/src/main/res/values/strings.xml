@@ -25,7 +25,7 @@
     <string name="high_quality_desc">更自然的细节增强（处理更慢）</string>
     <string name="input_is_hdr_title">照片已包含 HDR 信息</string>
     <string name="input_is_hdr_desc">这张照片已是 Ultra HDR。转换将基于其标准版本重新生成 HDR 效果，原始 HDR 数据不会保留。可继续导出，或更换普通照片获得最佳效果。</string>
-    <string name="auto_optimize_desc">根据照片亮度自动调节参数</string>
+    <string name="auto_optimize_desc">根据照片亮度自动调节内部参数（高光范围、保护强度等）；下方滑杆由你手动控制，两者共同生效</string>
     <string name="export">导出</string>
     <string name="cancel">取消</string>
     <string name="compare_label">拖动对比</string>

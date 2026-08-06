@@ -19,7 +19,6 @@ import io.github.gordonlu.lumadepth.model.ExportStateMachine
 import io.github.gordonlu.lumadepth.model.ProcessingError
 import io.github.gordonlu.lumadepth.model.ProcessingState
 import io.github.gordonlu.lumadepth.model.Stage
-import io.github.gordonlu.lumadepth.util.HdrSupport
 import io.github.gordonlu.lumadepth.util.LumaDepthException
 import io.github.gordonlu.lumadepth.util.LumaErrorType
 import kotlinx.coroutines.CancellationException
@@ -61,7 +60,6 @@ class EditorViewModel(
 
     private var uri: Uri? = null
     private var exportJob: Job? = null
-    private var hdrDisplayAvailable: Boolean = HdrSupport.isHdrDisplayAvailable(application)
 
     /** 预览参数流：防抖后触发预览渲染，拖动滑块不会产生并行任务。 */
     private val previewParams = MutableStateFlow(Triple(0f, 0f, false))
@@ -78,19 +76,11 @@ class EditorViewModel(
     }
 
     fun setUri(uri: Uri) {
-        // 更换照片时取消旧任务并释放旧图（先清状态，延迟回收，避免与绘制竞争）。
+        // 更换照片时取消旧任务；旧预览位图仅解除引用，交由 GC 回收
+        //（主动 recycle 可能与 Compose 绘制竞争）。
         exportJob?.cancel()
-        val oldSdr = _uiState.value.sdrPreview
-        val oldHdr = _uiState.value.hdrPreview
         _uiState.update {
             it.copy(sdrPreview = null, hdrPreview = null, analysis = null)
-        }
-        if (oldSdr != null || oldHdr != null) {
-            viewModelScope.launch {
-                kotlinx.coroutines.delay(300)
-                oldSdr?.recycle()
-                oldHdr?.recycle()
-            }
         }
         this.uri = uri
         viewModelScope.launch {
@@ -207,8 +197,6 @@ class EditorViewModel(
     fun dismissCancelled() {
         _uiState.update { it.copy(processing = ProcessingState.Idle) }
     }
-
-    fun isHdrDisplayAvailable(): Boolean = hdrDisplayAvailable
 
     private fun updateState(event: ExportEvent) {
         _uiState.update { it.copy(processing = ExportStateMachine.transition(it.processing, event)) }

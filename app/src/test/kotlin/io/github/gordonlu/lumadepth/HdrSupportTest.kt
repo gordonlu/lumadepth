@@ -9,7 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 用例 20：不支持 HDR 显示设备的降级状态判断。
+ * HDR 显示能力检测测试。
  *
  * Display.HDR_TYPE_* 常量值（android.view.Display）：
  * HDR_TYPE_DOLBY_VISION = 1, HDR_TYPE_HDR10 = 2, HDR_TYPE_HLG = 3, HDR_TYPE_HDR10_PLUS = 4
@@ -39,5 +39,16 @@ class HdrSupportTest {
     @Test
     fun mixedTypes_isHdr() {
         assertTrue(HdrSupport.isHdrCapable(intArrayOf(1, 4)))
+    }
+
+    /**
+     * 无 Display（如 Application Context 场景）必须安全返回 false，
+     * 不得抛 UnsupportedOperationException。
+     * 该测试同时保证 HdrSupport 的入口只接受 Display，
+     * 不接收 Context（编译期即验证）。
+     */
+    @Test
+    fun nullDisplay_returnsFalseWithoutThrow() {
+        assertFalse(HdrSupport.isHdrDisplayAvailable(null))
     }
 }

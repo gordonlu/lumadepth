@@ -33,6 +33,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -41,9 +42,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.gordonlu.lumadepth.R
+import androidx.compose.ui.platform.LocalView
 import io.github.gordonlu.lumadepth.model.ProcessingState
 import io.github.gordonlu.lumadepth.model.Stage
 import io.github.gordonlu.lumadepth.ui.components.CompareSlider
+import io.github.gordonlu.lumadepth.util.HdrSupport
 
 @Composable
 fun EditorScreen(uri: android.net.Uri, onBack: () -> Unit) {
@@ -53,6 +56,11 @@ fun EditorScreen(uri: android.net.Uri, onBack: () -> Unit) {
     androidx.compose.runtime.LaunchedEffect(uri) {
         viewModel.setUri(uri)
     }
+
+    // 从当前界面获取 Display 判断 HDR 能力（不得使用 Application Context，
+    // 未绑定 Display 的 Context 调用 getDisplay() 会抛 UnsupportedOperationException）。
+    val display = LocalView.current.display
+    val hdrAvailable = remember(display) { HdrSupport.isHdrDisplayAvailable(display) }
 
     Column(
         modifier = Modifier
@@ -142,7 +150,7 @@ fun EditorScreen(uri: android.net.Uri, onBack: () -> Unit) {
             Spacer(Modifier.height(16.dp))
 
             // HDR 显示能力提示
-            HdrHint(hdrAvailable = viewModel.isHdrDisplayAvailable())
+            HdrHint(hdrAvailable = hdrAvailable)
 
             Spacer(Modifier.height(16.dp))
 

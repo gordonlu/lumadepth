@@ -177,4 +177,16 @@ class StabilityTest {
         val growth = maxAfter - before
         assertTrue("内存持续增长：$growth", growth < 64L * 1024 * 1024)
     }
+
+    /**
+     * 插桩验证：使用真实界面的 Display 查询 HDR 能力不抛异常。
+     * Application Context 未绑定 Display，本项目已禁止用 Context 查询。
+     */
+    @Test
+    fun hdrSupport_withRealDisplay_noThrow() {
+        val display = context.display
+        val ok = io.github.gordonlu.lumadepth.util.HdrSupport.isHdrDisplayAvailable(display)
+        println("HdrSupport real display -> $ok")
+        assertTrue(true) // 不抛异常即通过
+    }
 }

@@ -50,7 +50,12 @@ class StabilityTest {
             }
             val analysis = Analysis.analyze(luma)
             val params = AutoParameters.forAnalysis(analysis, 0.5f, 0.1f, true)
-            val gainMapSource = Bitmap.createScaledBitmap(base, width / 4, height / 4, true)
+            val gainMapSource = Bitmap.createScaledBitmap(
+                base,
+                (width / 4).coerceAtLeast(1),
+                (height / 4).coerceAtLeast(1),
+                true,
+            )
             val gainMap = GainMapRenderer().render(gainMapSource, params)
             try {
                 val out = ByteArrayOutputStream()
@@ -179,14 +184,16 @@ class StabilityTest {
     }
 
     /**
-     * 插桩验证：使用真实界面的 Display 查询 HDR 能力不抛异常。
-     * Application Context 未绑定 Display，本项目已禁止用 Context 查询。
+     * 插桩验证：通过 DisplayManager 获取系统默认 Display 查询 HDR 能力不抛异常。
+     * 注意：Application Context 未绑定 Display，本项目已禁止用 Context.getDisplay()。
      */
     @Test
     fun hdrSupport_withRealDisplay_noThrow() {
-        val display = context.display
+        val dm = context.getSystemService(android.view.DisplayManager::class.java)
+        assertNotNull(dm)
+        val display = dm!!.getDisplay(android.view.Display.DEFAULT_DISPLAY)
         val ok = io.github.gordonlu.lumadepth.util.HdrSupport.isHdrDisplayAvailable(display)
-        println("HdrSupport real display -> $ok")
+        println("HdrSupport default display -> $ok")
         assertTrue(true) // 不抛异常即通过
     }
 }

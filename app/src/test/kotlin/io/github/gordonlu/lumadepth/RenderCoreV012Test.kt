@@ -54,10 +54,11 @@ class RenderCoreV012Test {
         val w = 96
         val h = 96
         val img = TestImages.solid(w, h, TestImages.argb(20, 20, 20))
-        // 3x3 小亮点（小于区域滤波半径，由细节尺度处理）
+        // 3x3 小亮点（小于区域滤波半径，由细节尺度处理；亮度 210/255 避开
+        // 高光收敛区，单独验证细节尺度）
         for (y in 46..48) {
             for (x in 46..48) {
-                img[y * w + x] = TestImages.argb(255, 255, 255)
+                img[y * w + x] = TestImages.argb(210, 210, 210)
             }
         }
         // 显式参数（关闭白色保护，隔离细节尺度的影响）

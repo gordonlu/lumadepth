@@ -25,9 +25,17 @@ object PreviewRenderCore {
         val out = IntArray(n)
         for (i in 0 until n) {
             val argb = pixels[i]
-            val r = Srgb.toLinear(((argb shr 16) and 0xFF) / 255f) * gain[i]
-            val g = Srgb.toLinear(((argb shr 8) and 0xFF) / 255f) * gain[i]
-            val b = Srgb.toLinear((argb and 0xFF) / 255f) * gain[i]
+            val sr = Srgb.toLinear(((argb shr 16) and 0xFF) / 255f)
+            val sg = Srgb.toLinear(((argb shr 8) and 0xFF) / 255f)
+            val sb = Srgb.toLinear((argb and 0xFF) / 255f)
+            // 预览专用：只对增益引入的高光增量做收敛（原图高光不动，强度 0 恒等）。
+            // SDR 屏幕无法显示超过白点的亮度，若不收敛，增益后的高光会被硬压成纯白，
+            // 造成"预览过曝、导出正常"的观感。
+            val sdrLuma = 0.2126f * sr + 0.7152f * sg + 0.0722f * sb
+            val excessRoll = 1f - EXCESS_ROLLOFF * smoothstep(0.70f, 0.95f, sdrLuma)
+            val r = sr + (sr * gain[i] - sr) * excessRoll
+            val g = sg + (sg * gain[i] - sg) * excessRoll
+            val b = sb + (sb * gain[i] - sb) * excessRoll
             val maxC = max(max(r, g), b)
             val overshoot = (maxC - 1f).coerceAtLeast(0f)
             if (overshoot > 0f) {
@@ -49,6 +57,12 @@ object PreviewRenderCore {
         return out
     }
 
+    private fun smoothstep(edge0: Float, edge1: Float, x: Float): Float {
+        if (edge1 <= edge0) return if (x > edge0) 1f else 0f
+        val t = ((x - edge0) / (edge1 - edge0)).coerceIn(0f, 1f)
+        return t * t * (3f - 2f * t)
+    }
+
     private fun encodePixel(r: Float, g: Float, b: Float): Int {
         val rout = (Srgb.fromLinear(r.coerceIn(0f, 1f)) * 255f + 0.5f).toInt().coerceIn(0, 255)
         val gout = (Srgb.fromLinear(g.coerceIn(0f, 1f)) * 255f + 0.5f).toInt().coerceIn(0, 255)
@@ -65,4 +79,7 @@ object PreviewRenderCore {
 
     private const val CHROMA_K1 = 1.2f
     private const val CHROMA_K2 = 2.0f
+
+    /** 预览高光增量收敛强度：0.5 = 高光端增益引入的增量减半。 */
+    private const val EXCESS_ROLLOFF = 0.5f
 }

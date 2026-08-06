@@ -37,6 +37,9 @@ object GainComputation {
     /** 高质量模式：保边滤波的强度域平滑参数。 */
     const val LLF_SIGMA_R = 0.05f
 
+    /** 细节增益在高光端的收敛强度（0.75~0.95 区间递减）。 */
+    const val DETAIL_HIGHLIGHT_ROLLOFF = 0.7f
+
     /**
      * @param pixels sRGB ARGB_8888 像素（已按 EXIF 旋转，sRGB 色彩空间）
      * @return 逐像素线性增益（≥1，有限，已做孤立峰值清理）
@@ -114,9 +117,11 @@ object GainComputation {
                 val regionMask = InverseTonemap.smoothstep(REGION_LOG_START, REGION_LOG_END, regionLogY[i])
                 logGain += p.regionGainEv * regionMask * shadowAllow
             }
-            // 细节尺度：连续置信度调制（硬上限由 detailGainEv ≤ 0.7 保证）
+            // 细节尺度：连续置信度调制（硬上限由 detailGainEv ≤ 0.7 保证）；
+            // 接近白色时细节增强收敛，避免局部增强在高光处叠加过曝。
             if (p.detailGainEv > 0f && detailConfidence != null) {
-                logGain += p.detailGainEv * detailConfidence[i]
+                val detailRoll = 1f - DETAIL_HIGHLIGHT_ROLLOFF * InverseTonemap.smoothstep(0.75f, 0.95f, y)
+                logGain += p.detailGainEv * detailConfidence[i] * detailRoll
             }
             // 高光增益收敛：接近白色时整体增益递减，避免高光过曝
             if (p.highlightRolloff > 0f) {
